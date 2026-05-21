@@ -32,6 +32,9 @@
         <label class="model-pick">Model LLM
           <select id="model"></select>
         </label>
+        <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
+          <input type="checkbox" id="with-humanize" /> Z propozycjami humanizacji
+        </label>
         <span id="status" class="status"></span>
       </div>
     </section>
@@ -113,6 +116,7 @@
     </div>
     <div id="pop-reason" class="pop-reason"></div>
     <div id="pop-list" class="pop-list"></div>
+    <div id="pop-preview" class="pop-preview hidden"></div>
     <div class="pop-custom">
       <input id="pop-input" type="text" placeholder="Wpisz własną wersję..." />
       <button id="pop-apply">Zastosuj</button>

@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from starlette.requests import Request
 
 from detektor.config import MODEL_IDS, Settings, get_settings
-from detektor.humanize import humanize_text
+from detektor.humanize import attach_proposals, humanize_text
 from detektor.llm import GeminiJudge
 from detektor.llm.discovery import list_available_models
 from detektor.llm.rewriter import GeminiRewriter
@@ -29,6 +29,7 @@ _templates = Jinja2Templates(directory=str(_BASE / "templates"))
 class AnalyzeRequest(BaseModel):
     text: str = Field(min_length=1)
     model: str | None = None
+    humanize: bool = False
 
 
 class RewriteRequest(BaseModel):
@@ -74,7 +75,12 @@ def analyze(req: AnalyzeRequest) -> Report:
             detail=f"Tekst za długi (max {settings.max_text_chars} znaków).",
         )
     settings = _with_model(settings, req.model)
-    return analyze_text(req.text, settings=settings)
+    report = analyze_text(req.text, settings=settings)
+    if req.humanize:
+        error = attach_proposals(report, req.text, settings=settings)
+        if error:
+            report.notes.append(error)
+    return report
 
 
 @app.post("/api/rewrite")

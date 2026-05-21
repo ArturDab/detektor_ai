@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from .config import Settings, get_settings
 from .llm.rewriter import GeminiRewriter
-from .models import Finding
+from .models import Finding, Report
 from .pipeline import analyze_text
+from .text import segment
 
 _CTX = 80  # ile znakow kontekstu z kazdej strony fragmentu
 _MAX_FRAGMENTS = 12  # limit wywolan LLM na jedna humanizacje
@@ -20,6 +21,38 @@ def _pick_fragments(findings: list[Finding]) -> list[Finding]:
             chosen.append(f)
             last_end = f.end
     return chosen[:_MAX_FRAGMENTS]
+
+
+def attach_proposals(
+    report: Report,
+    text: str,
+    settings: Settings | None = None,
+    rewriter: GeminiRewriter | None = None,
+) -> str | None:
+    """Dolacza 3 propozycje + zdanie-kontekst do wykrytych fragmentow (in-place).
+
+    Zwraca komunikat bledu, gdy LLM niedostepny; w przeciwnym razie None.
+    """
+    settings = settings or get_settings()
+    rewriter = rewriter or GeminiRewriter(settings)
+    if not rewriter.available():
+        return "LLM niedostępny — propozycje wymagają klucza API."
+
+    doc = segment(text, use_spacy=settings.use_spacy)
+    sents = [(s.start, s.start + len(s.text), s.text) for s in doc.sentences]
+
+    def sentence_for(start: int, end: int) -> str:
+        for a, b, t in sents:
+            if a <= start and end <= b:
+                return t
+        return text[max(0, start - _CTX) : min(len(text), end + _CTX)]
+
+    for f in _pick_fragments(report.findings):
+        quote = text[f.start : f.end]
+        ctx = sentence_for(f.start, f.end)
+        f.proposals = rewriter.rewrite(quote, ctx, f.message or "", n=3)
+        f.context = ctx
+    return None
 
 
 def humanize_text(
