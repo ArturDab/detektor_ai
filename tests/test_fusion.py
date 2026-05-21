@@ -27,6 +27,21 @@ def test_heuristics_only_caps_confidence_and_adds_note():
     assert abs(r.slop.score - 50.0) < 1e-6
 
 
+def test_llm_error_propagates_to_report_and_notes():
+    s = Settings()
+    r = fuse(
+        text="x",
+        word_count=400,
+        results=_results(50.0),
+        verdict=None,
+        settings=s,
+        judge_available=True,
+        llm_error="NotFound: 404 model not found",
+    )
+    assert r.llm_error == "NotFound: 404 model not found"
+    assert any("Powod: NotFound" in n for n in r.notes)
+
+
 def test_bands_track_score():
     s = Settings()
     low = fuse(

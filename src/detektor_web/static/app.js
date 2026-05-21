@@ -24,6 +24,22 @@ function colorFor(score) {
   return getComputedStyle(document.documentElement).getPropertyValue("--red");
 }
 
+// Jednoznaczny opis skali jakosci (wyzej = wiecej slopu = gorzej).
+function bandSlop(score) {
+  if (score < 25) return "Niski slop · dobra jakość";
+  if (score < 50) return "Umiarkowany slop";
+  if (score < 75) return "Podwyższony slop · sporo lania wody";
+  return "Wysoki slop · słaba jakość";
+}
+
+// Jednoznaczny opis skali autorstwa AI.
+function bandAi(score) {
+  if (score < 25) return "Raczej człowiek";
+  if (score < 50) return "Niejednoznaczne, raczej człowiek";
+  if (score < 75) return "Możliwe AI";
+  return "Prawdopodobnie AI";
+}
+
 function gauge(score) {
   const r = 52;
   const c = 2 * Math.PI * r;
@@ -36,6 +52,26 @@ function gauge(score) {
     <text x="60" y="58" class="g-num">${score.toFixed(0)}</text>
     <text x="60" y="76" class="g-cap">/100</text>
   </svg>`;
+}
+
+// Jednozdaniowy werdykt laczacy obie niezalezne osie (2x2).
+function renderVerdict(r) {
+  const slop = r.slop.score;
+  const ai = r.ai_provenance.score;
+  const slopHigh = slop >= 50;
+  const aiHigh = ai >= 50;
+  let headline;
+  if (!slopHigh && !aiHigh) headline = "Dobra jakość, prawdopodobnie napisane przez człowieka.";
+  else if (!slopHigh && aiHigh) headline = "Dobra jakość, ale są sygnały autorstwa AI.";
+  else if (slopHigh && !aiHigh) headline = "Generyczny tekst — ale raczej ludzki.";
+  else headline = "Generyczny tekst z wyraźnymi sygnałami AI.";
+
+  $("verdict-headline").textContent = headline;
+  $("verdict-sub").innerHTML =
+    `Jakość/slop: <strong>${slop.toFixed(0)}/100</strong> ` +
+    `(${bandSlop(slop)}) &nbsp;·&nbsp; ` +
+    `Sygnał AI: <strong>${ai.toFixed(0)}/100</strong> (${bandAi(ai)})`;
+  $("verdict").dataset.tone = slopHigh || aiHigh ? "warn" : "ok";
 }
 
 function breakdownHtml(items) {
@@ -105,19 +141,36 @@ function renderFindings(findings) {
 }
 
 function renderNotes(notes) {
-  $("notes").innerHTML = (notes || [])
+  // Blad LLM pokazujemy osobno (alert), wiec pomijamy go w zwyklych notatkach.
+  const info = (notes || []).filter((n) => !n.startsWith("Ocena LLM nie powiodla"));
+  $("notes").innerHTML = info
     .map((n) => `<div class="note">${escapeHtml(n)}</div>`)
     .join("");
 }
 
+function renderLlmError(err) {
+  const box = $("llm-error");
+  if (err) {
+    box.innerHTML =
+      `<strong>Ocena LLM nie powiodła się — wynik wyłącznie heurystyczny.</strong>` +
+      `<div class="alert-detail">Powód: ${escapeHtml(err)}</div>`;
+    box.classList.remove("hidden");
+  } else {
+    box.classList.add("hidden");
+  }
+}
+
 function renderReport(r) {
+  renderVerdict(r);
+  renderLlmError(r.llm_error);
+
   $("gauge-slop").innerHTML = gauge(r.slop.score);
-  $("band-slop").textContent = r.slop.band;
+  $("band-slop").textContent = bandSlop(r.slop.score);
   $("conf-slop").textContent = `pewnosc: ${(r.slop.confidence * 100).toFixed(0)}%`;
   $("break-slop").innerHTML = breakdownHtml(r.slop.breakdown);
 
   $("gauge-ai").innerHTML = gauge(r.ai_provenance.score);
-  $("band-ai").textContent = r.ai_provenance.band;
+  $("band-ai").textContent = bandAi(r.ai_provenance.score);
   $("conf-ai").textContent = `pewnosc: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
   $("break-ai").innerHTML = breakdownHtml(r.ai_provenance.breakdown);
 
@@ -145,6 +198,7 @@ async function analyze() {
     return;
   }
   $("analyze").disabled = true;
+  $("analyze").classList.add("loading");
   $("status").textContent = "Analizuje...";
   try {
     const resp = await fetch("/api/analyze", {
@@ -163,6 +217,7 @@ async function analyze() {
     $("status").textContent = "Blad: " + e.message;
   } finally {
     $("analyze").disabled = false;
+    $("analyze").classList.remove("loading");
   }
 }
 

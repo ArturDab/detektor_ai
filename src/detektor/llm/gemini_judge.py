@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 class GeminiJudge:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
+        self.last_error: str | None = None
 
     def available(self) -> bool:
         s = self.settings
@@ -32,6 +33,7 @@ class GeminiJudge:
         return True
 
     def judge(self, text: str) -> GeminiVerdict | None:
+        self.last_error = None
         if not self.available() or not text.strip():
             return None
         attempts = max(1, self.settings.llm_max_retries + 1)
@@ -39,7 +41,13 @@ class GeminiJudge:
             try:
                 return self._parse(self._generate(text))
             except Exception as exc:  # noqa: BLE001 - LLM zawsze opcjonalny
+                self.last_error = f"{type(exc).__name__}: {exc}"[:300]
                 log.warning("Gemini: proba %d/%d nieudana: %s", i + 1, attempts, exc)
+        log.error(
+            "Gemini: wszystkie proby nieudane (model=%s): %s",
+            self.settings.gemini_model,
+            self.last_error,
+        )
         return None
 
     def _generate(self, text: str) -> str:
