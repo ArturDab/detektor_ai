@@ -34,3 +34,5 @@ def test_judge_returns_none_on_error(monkeypatch):
 
     monkeypatch.setattr(GeminiJudge, "_generate", boom)
     assert judge.judge("tekst") is None
+    assert judge.last_error is not None
+    assert "api down" in judge.last_error

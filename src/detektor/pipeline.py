@@ -26,6 +26,7 @@ def analyze_text(
         judge = GeminiJudge(settings)
     judge_available = judge.available()
     verdict = judge.judge(text) if judge_available else None
+    llm_error = judge.last_error if (judge_available and verdict is None) else None
 
     return fuse(
         text=text,
@@ -34,4 +35,5 @@ def analyze_text(
         verdict=verdict,
         settings=settings,
         judge_available=judge_available,
+        llm_error=llm_error,
     )

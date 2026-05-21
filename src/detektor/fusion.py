@@ -108,6 +108,7 @@ def fuse(
     verdict: GeminiVerdict | None,
     settings: Settings,
     judge_available: bool,
+    llm_error: str | None = None,
 ) -> Report:
     scores = {r.analyzer: r.score for r in results}
     findings: list[Finding] = [f for r in results for f in r.findings]
@@ -163,7 +164,10 @@ def fuse(
         slop_break = [ScoreContribution(name="heurystyki", score=round(heur_slop, 1), weight=1.0)]
         ai_break = [ScoreContribution(name="heurystyki", score=round(heur_ai, 1), weight=1.0)]
         if judge_available:
-            notes.append("LLM byl dostepny, ale nie zwrocil wyniku - ocena heurystyczna.")
+            msg = "Ocena LLM nie powiodla sie - wynik wylacznie heurystyczny."
+            if llm_error:
+                msg += f" Powod: {llm_error}"
+            notes.append(msg)
         else:
             notes.append(
                 "LLM niedostepny (brak klucza/SDK) - ocena wylacznie heurystyczna, nizsza pewnosc."
@@ -201,5 +205,6 @@ def fuse(
         analyzer_scores={k: round(v, 1) for k, v in scores.items()},
         llm_available=verdict is not None,
         llm_explanation=explanation,
+        llm_error=llm_error,
         notes=notes,
     )

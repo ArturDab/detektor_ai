@@ -70,6 +70,7 @@ class Report(BaseModel):
     analyzer_scores: dict[str, float] = Field(default_factory=dict)
     llm_available: bool = False
     llm_explanation: str | None = None
+    llm_error: str | None = None
     notes: list[str] = Field(default_factory=list)
 
 
