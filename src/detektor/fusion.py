@@ -164,17 +164,17 @@ def fuse(
         slop_break = [ScoreContribution(name="heurystyki", score=round(heur_slop, 1), weight=1.0)]
         ai_break = [ScoreContribution(name="heurystyki", score=round(heur_ai, 1), weight=1.0)]
         if judge_available:
-            msg = "Ocena LLM nie powiodla sie - wynik wylacznie heurystyczny."
+            msg = "Ocena LLM nie powiodła się — wynik wyłącznie heurystyczny."
             if llm_error:
-                msg += f" Powod: {llm_error}"
+                msg += f" Powód: {llm_error}"
             notes.append(msg)
         else:
             notes.append(
-                "LLM niedostepny (brak klucza/SDK) - ocena wylacznie heurystyczna, nizsza pewnosc."
+                "LLM niedostępny (brak klucza/SDK) — ocena wyłącznie heurystyczna, niższa pewność."
             )
 
     if word_count < 30:
-        notes.append("Tekst bardzo krotki - wyniki maja charakter orientacyjny.")
+        notes.append("Tekst bardzo krótki — wyniki mają charakter orientacyjny.")
 
     slop_cap = None if verdict else settings.heuristics_only_conf_cap_slop
     ai_cap = None if verdict else settings.heuristics_only_conf_cap_ai

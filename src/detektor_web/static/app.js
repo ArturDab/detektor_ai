@@ -2,12 +2,12 @@
 
 const $ = (id) => document.getElementById(id);
 
-const SEV_LABEL = { high: "wysoki", medium: "sredni", low: "niski", info: "info" };
+const SEV_LABEL = { high: "wysoki", medium: "średni", low: "niski", info: "info" };
 const DIM_LABEL = {
-  generic: "Generycznosc",
+  generic: "Generyczność",
   cliche: "Frazesy",
-  low_information: "Niska informatywnosc",
-  repetition: "Powtarzalnosc",
+  low_information: "Niska informatywność",
+  repetition: "Powtarzalność",
   unnatural_rhythm: "Nienaturalny rytm",
 };
 
@@ -123,7 +123,7 @@ function renderDimensions(dimensions) {
 function renderFindings(findings) {
   $("findings-count").textContent = `(${findings.length})`;
   if (!findings.length) {
-    $("findings").innerHTML = "<li class='finding'>Brak wykrytych sygnalow.</li>";
+    $("findings").innerHTML = "<li class='finding'>Brak wykrytych sygnałów.</li>";
     return;
   }
   $("findings").innerHTML = findings
@@ -142,7 +142,7 @@ function renderFindings(findings) {
 
 function renderNotes(notes) {
   // Blad LLM pokazujemy osobno (alert), wiec pomijamy go w zwyklych notatkach.
-  const info = (notes || []).filter((n) => !n.startsWith("Ocena LLM nie powiodla"));
+  const info = (notes || []).filter((n) => !n.startsWith("Ocena LLM nie powiodła"));
   $("notes").innerHTML = info
     .map((n) => `<div class="note">${escapeHtml(n)}</div>`)
     .join("");
@@ -166,12 +166,12 @@ function renderReport(r) {
 
   $("gauge-slop").innerHTML = gauge(r.slop.score);
   $("band-slop").textContent = bandSlop(r.slop.score);
-  $("conf-slop").textContent = `pewnosc: ${(r.slop.confidence * 100).toFixed(0)}%`;
+  $("conf-slop").textContent = `pewność: ${(r.slop.confidence * 100).toFixed(0)}%`;
   $("break-slop").innerHTML = breakdownHtml(r.slop.breakdown);
 
   $("gauge-ai").innerHTML = gauge(r.ai_provenance.score);
   $("band-ai").textContent = bandAi(r.ai_provenance.score);
-  $("conf-ai").textContent = `pewnosc: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
+  $("conf-ai").textContent = `pewność: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
   $("break-ai").innerHTML = breakdownHtml(r.ai_provenance.breakdown);
 
   renderNotes(r.notes);
@@ -199,7 +199,7 @@ async function analyze() {
   }
   $("analyze").disabled = true;
   $("analyze").classList.add("loading");
-  $("status").textContent = "Analizuje...";
+  $("status").textContent = "Analizuję...";
   try {
     const resp = await fetch("/api/analyze", {
       method: "POST",
@@ -208,13 +208,13 @@ async function analyze() {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `Blad ${resp.status}`);
+      throw new Error(err.detail || `Błąd ${resp.status}`);
     }
     const report = await resp.json();
     renderReport(report);
-    $("status").textContent = `Gotowe (${report.word_count} slow).`;
+    $("status").textContent = `Gotowe (${report.word_count} słów).`;
   } catch (e) {
-    $("status").textContent = "Blad: " + e.message;
+    $("status").textContent = "Błąd: " + e.message;
   } finally {
     $("analyze").disabled = false;
     $("analyze").classList.remove("loading");

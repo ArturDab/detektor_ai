@@ -81,5 +81,5 @@ def band_for(score: float) -> str:
     if score < 50:
         return "umiarkowany"
     if score < 75:
-        return "podwyzszony"
+        return "podwyższony"
     return "wysoki"
