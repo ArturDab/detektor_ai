@@ -48,8 +48,8 @@ class StructuralAnalyzer:
                             start=line_start,
                             end=line_start + len(stripped),
                             severity=Severity.medium,
-                            message="Naglowek w stylu Title Case (kalka z ang.).",
-                            suggestion="W polszczyznie naglowki pisz zdaniowo.",
+                            message="Nagłówek w stylu Title Case (kalka z ang.).",
+                            suggestion="W polszczyźnie nagłówki pisz zdaniowo.",
                             matched_text=stripped[:80],
                         )
                     )
@@ -68,8 +68,8 @@ class StructuralAnalyzer:
                         start=s.start + head.start(),
                         end=s.start + head.end(),
                         severity=Severity.low,
-                        message=f"Schematyczny lacznik na poczatku zdania: '{head.group(0)}'.",
-                        suggestion="Ogranicz laczniki-przejscia; lacz mysli naturalnie.",
+                        message=f"Schematyczny łącznik na początku zdania: '{head.group(0)}'.",
+                        suggestion="Ogranicz łączniki-przejścia; łącz myśli naturalnie.",
                         matched_text=head.group(0),
                     )
                 )
