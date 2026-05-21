@@ -1,0 +1,108 @@
+:root {
+  --bg: #0f1419;
+  --panel: #1a212b;
+  --panel-2: #232c38;
+  --text: #e6edf3;
+  --muted: #8b97a7;
+  --accent: #4f9cf9;
+  --green: #2ecc71;
+  --yellow: #f1c40f;
+  --orange: #e67e22;
+  --red: #e74c3c;
+  --border: #2c3744;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.topbar { padding: 24px 28px 8px; }
+.topbar h1 { margin: 0; font-size: 24px; }
+.topbar .pl {
+  font-size: 12px; background: var(--accent); color: #03121f;
+  padding: 2px 7px; border-radius: 6px; vertical-align: middle;
+}
+.subtitle { color: var(--muted); margin: 6px 0 0; max-width: 760px; }
+
+.layout { padding: 16px 28px 60px; display: grid; gap: 20px; }
+
+.input-pane textarea {
+  width: 100%; min-height: 220px; resize: vertical;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+  font-size: 15px; font-family: inherit;
+}
+.controls { margin-top: 12px; display: flex; align-items: center; gap: 14px; }
+button {
+  background: var(--accent); color: #03121f; border: 0; cursor: pointer;
+  font-weight: 600; font-size: 15px; padding: 10px 22px; border-radius: 8px;
+}
+button:disabled { opacity: .55; cursor: default; }
+.status { color: var(--muted); font-size: 14px; }
+
+.results.hidden, .hidden { display: none; }
+
+.scores { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.score-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px; text-align: center;
+}
+.score-card h2 { margin: 0 0 6px; font-size: 16px; }
+.gauge-wrap { display: flex; justify-content: center; }
+.gauge { width: 150px; height: 150px; }
+.g-bg { fill: none; stroke: var(--panel-2); stroke-width: 12; }
+.g-fg { fill: none; stroke-width: 12; stroke-linecap: round;
+  transform: rotate(-90deg); transform-origin: 60px 60px; transition: stroke-dashoffset .6s; }
+.g-num { fill: var(--text); font-size: 30px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+.g-cap { fill: var(--muted); font-size: 11px; text-anchor: middle; }
+.band { font-weight: 600; margin-top: 4px; text-transform: capitalize; }
+.conf { color: var(--muted); font-size: 13px; }
+.breakdown { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.disclaimer { font-size: 12px; color: var(--muted); margin: 10px 0 0; font-style: italic; }
+
+.notes { display: grid; gap: 8px; }
+.note { background: #2a2418; border: 1px solid #5a4a1f; color: #f3d99b;
+  padding: 10px 14px; border-radius: 8px; font-size: 14px; }
+
+.llm-box { background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; }
+
+.panel { background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 18px; }
+.panel h3 { margin: 0 0 12px; font-size: 15px; }
+.muted { color: var(--muted); font-weight: 400; }
+
+.dimensions { display: grid; gap: 8px; }
+.dim-row { display: grid; grid-template-columns: 160px 1fr 40px; gap: 10px; align-items: center; font-size: 13px; }
+.dim-bar { background: var(--panel-2); border-radius: 5px; height: 10px; overflow: hidden; }
+.dim-fill { height: 100%; background: var(--accent); }
+
+.legend { margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font-size: 11px; padding: 2px 8px; border-radius: 10px; color: #03121f; }
+
+.highlighted {
+  background: var(--panel-2); border-radius: 8px; padding: 14px;
+  white-space: normal; word-wrap: break-word; max-height: 460px; overflow-y: auto;
+  font-size: 15px;
+}
+mark { border-radius: 3px; padding: 0 2px; cursor: help; color: #03121f; }
+.sev-high { background: var(--red); }
+.sev-medium { background: var(--orange); }
+.sev-low { background: var(--yellow); }
+.sev-info { background: #6fb6ff; }
+
+.findings { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.finding { background: var(--panel-2); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+.finding .quote { font-weight: 600; }
+.finding .sug { color: var(--green); font-size: 13px; }
+.finding .src { color: var(--muted); font-size: 12px; }
+
+@media (max-width: 720px) {
+  .scores { grid-template-columns: 1fr; }
+}

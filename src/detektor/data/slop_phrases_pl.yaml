@@ -1,0 +1,111 @@
+# Leksykon fraz typowych dla "AI slop" w jezyku polskim.
+# Mozna rozszerzac BEZ zmiany kodu. Kazdy wpis:
+#   pattern    - wyrazenie regularne (IGNORECASE, UNICODE); uzywaj rdzeni \w*
+#   message    - krotki opis po polsku (tooltip)
+#   suggestion - propozycja poprawy (opcjonalnie)
+#   severity   - info | low | medium | high (domyslnie medium)
+#   weight     - waga w gestosci (domyslnie 1.0)
+phrases:
+  - pattern: '\bwarto (?:zauważyć|podkreślić|pamiętać|wspomnieć|zaznaczyć|dodać|wiedzieć|nadmienić|mieć na uwadze)\b'
+    message: 'Frazes-wypelniacz naduzywany przez modele AI.'
+    suggestion: 'Usun lub przejdz wprost do konkretu.'
+    severity: medium
+  - pattern: '\bwarto (?:również |także |przy tym )?zwrócić uwagę\b'
+    message: 'Pusty zwrot wprowadzajacy ("warto zwrocic uwage").'
+    suggestion: 'Napisz wprost, na co i dlaczego.'
+    severity: medium
+  - pattern: '\bnależy (?:zauważyć|podkreślić|pamiętać|mieć na uwadze|wspomnieć)\b'
+    message: 'Hedging typowy dla tekstow generowanych.'
+    suggestion: 'Sformuluj teze bezposrednio.'
+    severity: medium
+  - pattern: '\btrzeba (?:przyznać|zauważyć|pamiętać|podkreślić)\b'
+    message: 'Hedging / wtypelniacz.'
+    severity: low
+    weight: 0.6
+  - pattern: '\bw (?:dzisiejszych|obecnych) czasach\b'
+    message: 'Sztampowy wstep ("w dzisiejszych czasach").'
+    suggestion: 'Konkretny czas/kontekst zamiast oglosu.'
+    severity: medium
+  - pattern: '\bw dzisiejszym (?:dynamicznie )?(?:szybko )?(?:zmieniającym się )?świecie\b'
+    message: 'Klasyczny pusty wstep AI.'
+    suggestion: 'Zacznij od konkretu, nie od ogolnika.'
+    severity: high
+  - pattern: '\bw (?:erze|dobie) (?:cyfrow\w+|cyfryzacji|internetu|sztucznej inteligencji|nowych technologii)\b'
+    message: 'Ogolnikowy wstep "w erze/dobie...".'
+    severity: medium
+  - pattern: '\bnie sposób (?:nie zauważyć|nie docenić|przecenić|pominąć|nie wspomnieć)\b'
+    message: 'Patetyczny zwrot naduzywany przez AI.'
+    severity: medium
+  - pattern: '\bogólnie rzecz biorąc\b'
+    message: 'Wypelniacz oslabiajacy konkret.'
+    severity: low
+    weight: 0.7
+  - pattern: '\b(?:co|to) (?:ostatecznie )?prowadzi (?:nas )?do wniosku\b'
+    message: 'Sztuczne "domykanie mysli".'
+    suggestion: 'Podaj wniosek wprost.'
+    severity: medium
+  - pattern: '\bholistyczn\w+ (?:podejści\w+|sposób|spojrzeni\w+)\b'
+    message: 'Korpomowa / buzzword.'
+    severity: medium
+  - pattern: '\b(?:odgrywa|odgrywają|gra|grają|pełni|pełnią)\w* (?:kluczow\w+|istotn\w+|ważn\w+|znacząc\w+|niebagateln\w+) rol\w+\b'
+    message: 'Pusty schemat "odgrywa kluczowa role".'
+    suggestion: 'Powiedz konkretnie, co robi.'
+    severity: medium
+  - pattern: '\bnie tylko\b[^.\n]{0,60}?\bale (?:także|również|też|przede wszystkim)\b'
+    message: 'Naduzywana konstrukcja "nie tylko..., ale takze...".'
+    severity: medium
+  - pattern: '\b(?:zanurz|zanurzmy|zanurzając)\w* się w\b'
+    message: 'Marketingowy frazes ("zanurz sie w...").'
+    severity: high
+  - pattern: '\bodkryj(?:my|cie)? (?:świat|tajniki|sekrety|możliwości|potencjał)\b'
+    message: 'Frazes CTA typowy dla AI.'
+    severity: medium
+  - pattern: '\bfascynując\w+ świat\b'
+    message: 'Pusty epitet ("fascynujacy swiat").'
+    severity: high
+  - pattern: '\botwiera\w* (?:przed nami )?(?:zupełnie )?nowe (?:możliwości|perspektywy|horyzonty|drzwi)\b'
+    message: 'Sztampa "otwiera nowe mozliwosci".'
+    severity: medium
+  - pattern: '\brewolucjonizuj\w+ (?:sposób|świat|branżę|rynek)\b'
+    message: 'Przesadny buzzword ("rewolucjonizuje").'
+    severity: medium
+  - pattern: '\bna wyciągnięcie ręki\b'
+    message: 'Zuzyty frazes.'
+    severity: low
+    weight: 0.7
+  - pattern: '\bstanowi\w* (?:nieodłączn\w+ (?:element|część)|fundament|podstaw\w+|filar)\b'
+    message: 'Patetyczny ogolnik.'
+    severity: low
+    weight: 0.8
+  - pattern: '\bbez (?:wątpienia|dwóch zdań|cienia wątpliwości)\b'
+    message: 'Wzmacniacz-wypelniacz.'
+    severity: low
+    weight: 0.5
+  - pattern: '\bniewątpliwie\b'
+    message: 'Naduzywany wzmacniacz.'
+    severity: low
+    weight: 0.4
+  - pattern: '\bz pewnością\b'
+    message: 'Naduzywany wzmacniacz.'
+    severity: info
+    weight: 0.4
+  - pattern: '\bwarto więc (?:pamiętać|zauważyć|wiedzieć|dodać)\b'
+    message: 'Sztuczny "morał" na koncu akapitu.'
+    suggestion: 'Usun zbedne podsumowanie zdania.'
+    severity: medium
+  - pattern: '\bdzięki czemu\b'
+    message: 'Czesty lacznik schematyczny.'
+    severity: info
+    weight: 0.4
+  - pattern: '\bpamiętaj(?:my)?, że\b'
+    message: 'Mentorski wtret typowy dla AI.'
+    severity: low
+    weight: 0.7
+  - pattern: '\bjak (?:już )?(?:wcześniej )?wspomniano\b'
+    message: 'Sztuczne odwolanie do tekstu.'
+    severity: low
+    weight: 0.7
+  - pattern: '\bw obliczu (?:dynamicznie )?(?:rosnąc\w+|zmieniając\w+|coraz)\b'
+    message: 'Patetyczny wstep.'
+    severity: low
+    weight: 0.8

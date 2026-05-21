@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Detektor AI slop (PL)</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Detektor AI slop <span class="pl">PL</span></h1>
+    <p class="subtitle">Heurystyki jezykowe + Gemini. Wklej artykul po polsku i sprawdz jakosc oraz sygnal autorstwa AI.</p>
+  </header>
+
+  <main class="layout">
+    <section class="input-pane">
+      <textarea id="text" placeholder="Wklej tutaj tekst artykulu po polsku..."></textarea>
+      <div class="controls">
+        <button id="analyze">Analizuj</button>
+        <span id="status" class="status"></span>
+      </div>
+    </section>
+
+    <section id="results" class="results hidden">
+      <div class="scores">
+        <div class="score-card">
+          <h2>Slop / jakosc</h2>
+          <div id="gauge-slop" class="gauge-wrap"></div>
+          <div id="band-slop" class="band"></div>
+          <div id="conf-slop" class="conf"></div>
+          <div id="break-slop" class="breakdown"></div>
+        </div>
+        <div class="score-card">
+          <h2>Prawdopodobienstwo AI</h2>
+          <div id="gauge-ai" class="gauge-wrap"></div>
+          <div id="band-ai" class="band"></div>
+          <div id="conf-ai" class="conf"></div>
+          <div id="break-ai" class="breakdown"></div>
+          <p class="disclaimer">To oszacowanie, nie dowod. Wynik bywa zawodny.</p>
+        </div>
+      </div>
+
+      <div id="notes" class="notes"></div>
+      <div id="llm-explanation" class="llm-box hidden"></div>
+
+      <div class="panel">
+        <h3>Wymiary jakosci (LLM)</h3>
+        <div id="dimensions" class="dimensions">brak danych z LLM</div>
+      </div>
+
+      <div class="panel">
+        <h3>Tekst z podswietleniami</h3>
+        <div class="legend">
+          <span class="chip sev-high">wysoki</span>
+          <span class="chip sev-medium">sredni</span>
+          <span class="chip sev-low">niski</span>
+          <span class="chip sev-info">info</span>
+        </div>
+        <div id="highlighted" class="highlighted"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Wykryte fragmenty <span id="findings-count" class="muted"></span></h3>
+        <ul id="findings" class="findings"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
