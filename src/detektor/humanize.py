@@ -1,0 +1,53 @@
+"""Humanizacja: automatyczne przepisanie wykrytych fragmentow na bardziej ludzkie."""
+
+from __future__ import annotations
+
+from .config import Settings, get_settings
+from .llm.rewriter import GeminiRewriter
+from .models import Finding
+from .pipeline import analyze_text
+
+_CTX = 80  # ile znakow kontekstu z kazdej strony fragmentu
+_MAX_FRAGMENTS = 12  # limit wywolan LLM na jedna humanizacje
+
+
+def _pick_fragments(findings: list[Finding]) -> list[Finding]:
+    """Nienakladajace sie fragmenty (greedy), posortowane po offsetach."""
+    chosen: list[Finding] = []
+    last_end = -1
+    for f in sorted(findings, key=lambda f: (f.start, -f.end)):
+        if f.end > f.start and f.start >= last_end:
+            chosen.append(f)
+            last_end = f.end
+    return chosen[:_MAX_FRAGMENTS]
+
+
+def humanize_text(
+    text: str,
+    settings: Settings | None = None,
+    rewriter: GeminiRewriter | None = None,
+) -> tuple[str, list[dict], str | None]:
+    """Zwraca (nowy_tekst, lista_zmian, blad). Kazda zmiana: {quote, replacement}."""
+    settings = settings or get_settings()
+    rewriter = rewriter or GeminiRewriter(settings)
+    if not rewriter.available():
+        return text, [], "LLM niedostępny — humanizacja wymaga klucza API."
+
+    report = analyze_text(text, settings=settings)
+    chosen = _pick_fragments(report.findings)
+    if not chosen:
+        return text, [], None
+
+    changes: list[dict] = []
+    new_text = text
+    # Od konca, by offsety z oryginalu pozostaly wazne dla wczesniejszych fragmentow.
+    for f in sorted(chosen, key=lambda f: f.start, reverse=True):
+        quote = text[f.start : f.end]
+        context = text[max(0, f.start - _CTX) : min(len(text), f.end + _CTX)]
+        props = rewriter.rewrite(quote, context, f.message or "", n=1)
+        if props and props[0] != quote:
+            new_text = new_text[: f.start] + props[0] + new_text[f.end :]
+            changes.append({"quote": quote, "replacement": props[0]})
+
+    changes.reverse()
+    return new_text, changes, rewriter.last_error if not changes else None

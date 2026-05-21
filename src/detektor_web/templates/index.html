@@ -43,6 +43,11 @@
         <div id="verdict-sub" class="verdict-sub"></div>
       </div>
 
+      <div class="actions">
+        <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
+        <span id="humanize-status" class="status"></span>
+      </div>
+
       <div id="llm-error" class="alert alert-error hidden"></div>
       <div id="notes" class="notes"></div>
 
@@ -100,6 +105,19 @@
       </div>
     </section>
   </main>
+
+  <div id="popover" class="popover hidden">
+    <div class="pop-head">
+      <span id="pop-quote" class="pop-quote"></span>
+      <button id="pop-close" class="pop-close" aria-label="Zamknij">×</button>
+    </div>
+    <div id="pop-reason" class="pop-reason"></div>
+    <div id="pop-list" class="pop-list"></div>
+    <div class="pop-custom">
+      <input id="pop-input" type="text" placeholder="Wpisz własną wersję..." />
+      <button id="pop-apply">Zastosuj</button>
+    </div>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>
