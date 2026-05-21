@@ -59,6 +59,18 @@ def test_analyze_accepts_known_model(monkeypatch):
     assert r.status_code == 200
 
 
+def test_analyze_with_humanize_attaches_proposals(monkeypatch):
+    monkeypatch.setattr(GeminiJudge, "available", lambda self: False)
+    monkeypatch.setattr(GeminiRewriter, "available", lambda self: True)
+    monkeypatch.setattr(GeminiRewriter, "rewrite", lambda self, q, c="", r="", n=3: ["a", "b", "c"])
+    text = "Warto zauważyć, że w dzisiejszym dynamicznie zmieniającym się świecie liczy się tempo."
+    r = client.post("/api/analyze", json={"text": text, "humanize": True})
+    assert r.status_code == 200
+    findings = r.json()["findings"]
+    assert any(f["proposals"] for f in findings)
+    assert any(f["context"] for f in findings)
+
+
 def test_rewrite_no_key(monkeypatch):
     monkeypatch.setattr(GeminiRewriter, "available", lambda self: False)
     r = client.post("/api/rewrite", json={"quote": "warto zauważyć"})

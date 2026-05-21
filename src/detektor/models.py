@@ -25,6 +25,9 @@ class Finding(BaseModel):
     message: str
     suggestion: str | None = None
     matched_text: str | None = None
+    # Wypelniane opcjonalnie przy analizie "z propozycjami humanizacji".
+    proposals: list[str] = Field(default_factory=list)
+    context: str | None = None
 
 
 class AnalyzerResult(BaseModel):

@@ -139,12 +139,26 @@ function renderFindings(findings) {
     .map((f, i) => {
       const sug = f.suggestion ? `<div class="sug">→ ${escapeHtml(f.suggestion)}</div>` : "";
       const txt = f.matched_text ? escapeHtml(f.matched_text) : "";
+      let action;
+      if (f.proposals && f.proposals.length) {
+        const opts = f.proposals
+          .map((p, j) => `<button class="prop-opt" data-idx="${i}" data-prop="${j}">${escapeHtml(p)}</button>`)
+          .join("");
+        action = `<div class="props">${opts}</div>
+          <div class="prop-preview hidden" data-idx="${i}"></div>
+          <div class="prop-custom-inline">
+            <input type="text" data-idx="${i}" placeholder="Wpisz własną wersję..." />
+            <button class="prop-custom-apply" data-idx="${i}">Zastosuj</button>
+          </div>`;
+      } else {
+        action = `<button class="show-props" data-idx="${i}">Propozycje zmiany</button>`;
+      }
       return `<li class="finding sev-${f.severity}">
         <div class="quote">${txt}</div>
         <div>${escapeHtml(f.message)}</div>
         ${sug}
         <div class="src">${escapeHtml(f.analyzer)} &middot; ${SEV_LABEL[f.severity] || f.severity}</div>
-        <button class="show-props" data-idx="${i}">Propozycje zmiany</button>
+        ${action}
       </li>`;
     })
     .join("");
@@ -240,6 +254,25 @@ function applyReplacement(idx, replacement) {
   $("status").textContent = 'Zastosowano zmianę. Kliknij „Analizuj", aby odświeżyć oceny.';
 }
 
+function previewHTML(f, proposal) {
+  const quote = CURRENT.text.slice(f.start, f.end);
+  const ctx =
+    f.context ||
+    CURRENT.text.slice(Math.max(0, f.start - 100), Math.min(CURRENT.text.length, f.end + 100));
+  const marked = `<mark class="preview-new">${escapeHtml(proposal)}</mark>`;
+  const i = ctx.indexOf(quote);
+  if (i < 0) return marked;
+  return escapeHtml(ctx.slice(0, i)) + marked + escapeHtml(ctx.slice(i + quote.length));
+}
+
+function renderPopProposals(props) {
+  const pop = $("popover");
+  pop._props = props;
+  $("pop-list").innerHTML = props
+    .map((p, j) => `<button class="pop-opt" data-prop="${j}">${escapeHtml(p)}</button>`)
+    .join("");
+}
+
 async function openRewrite(idx, anchor) {
   const f = CURRENT.findings[idx];
   if (!f) return;
@@ -249,9 +282,16 @@ async function openRewrite(idx, anchor) {
   $("pop-quote").textContent = quote.length > 60 ? quote.slice(0, 60) + "…" : quote;
   $("pop-reason").textContent = f.message + (f.suggestion ? "  →  " + f.suggestion : "");
   $("pop-input").value = "";
-  $("pop-list").innerHTML = "<div class='pop-empty'>Generuję propozycje…</div>";
+  $("pop-preview").classList.add("hidden");
   positionPopover(anchor);
 
+  // Propozycje policzone juz przy analizie -> pokazujemy od razu, bez dogenerowywania.
+  if (f.proposals && f.proposals.length) {
+    renderPopProposals(f.proposals);
+    return;
+  }
+
+  $("pop-list").innerHTML = "<div class='pop-empty'>Generuję propozycje…</div>";
   try {
     const ctxStart = Math.max(0, f.start - 80);
     const ctxEnd = Math.min(CURRENT.text.length, f.end + 80);
@@ -331,10 +371,12 @@ async function analyze() {
   $("status").textContent = "Analizuję...";
   closePopover();
   try {
+    const humanize = $("with-humanize").checked;
+    if (humanize) $("status").textContent = "Analizuję i generuję propozycje…";
     const resp = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, model: selectedModel() }),
+      body: JSON.stringify({ text, model: selectedModel(), humanize }),
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
@@ -381,8 +423,38 @@ $("highlighted").addEventListener("click", (e) => {
 });
 
 $("findings").addEventListener("click", (e) => {
-  const btn = e.target.closest(".show-props");
-  if (btn) openRewrite(Number(btn.dataset.idx), btn);
+  const show = e.target.closest(".show-props");
+  if (show) {
+    openRewrite(Number(show.dataset.idx), show);
+    return;
+  }
+  const opt = e.target.closest(".prop-opt");
+  if (opt) {
+    const f = CURRENT.findings[Number(opt.dataset.idx)];
+    if (f && f.proposals) applyReplacement(Number(opt.dataset.idx), f.proposals[Number(opt.dataset.prop)]);
+    return;
+  }
+  const capply = e.target.closest(".prop-custom-apply");
+  if (capply) {
+    const input = capply.closest(".finding").querySelector("input[data-idx]");
+    const val = input ? input.value.trim() : "";
+    if (val) applyReplacement(Number(capply.dataset.idx), val);
+  }
+});
+
+$("findings").addEventListener("mouseover", (e) => {
+  const opt = e.target.closest(".prop-opt");
+  if (!opt) return;
+  const f = CURRENT.findings[Number(opt.dataset.idx)];
+  const prev = opt.closest(".finding").querySelector(".prop-preview");
+  if (f && prev) {
+    prev.innerHTML = previewHTML(f, f.proposals[Number(opt.dataset.prop)]);
+    prev.classList.remove("hidden");
+  }
+});
+$("findings").addEventListener("mouseout", (e) => {
+  const opt = e.target.closest(".prop-opt");
+  if (opt) opt.closest(".finding").querySelector(".prop-preview").classList.add("hidden");
 });
 
 $("pop-close").addEventListener("click", closePopover);
@@ -393,6 +465,18 @@ $("pop-list").addEventListener("click", (e) => {
   const j = Number(opt.dataset.prop);
   if (props[j] != null) applyReplacement(Number($("popover").dataset.idx), props[j]);
 });
+$("pop-list").addEventListener("mouseover", (e) => {
+  const opt = e.target.closest(".pop-opt");
+  if (!opt) return;
+  const f = CURRENT.findings[Number($("popover").dataset.idx)];
+  const props = $("popover")._props || [];
+  const j = Number(opt.dataset.prop);
+  if (f && props[j] != null) {
+    $("pop-preview").innerHTML = previewHTML(f, props[j]);
+    $("pop-preview").classList.remove("hidden");
+  }
+});
+$("pop-list").addEventListener("mouseout", () => $("pop-preview").classList.add("hidden"));
 $("pop-apply").addEventListener("click", () => {
   const val = $("pop-input").value.trim();
   if (val) applyReplacement(Number($("popover").dataset.idx), val);
