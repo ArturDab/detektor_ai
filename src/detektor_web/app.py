@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 
-from detektor.config import get_settings
+from detektor.config import MODEL_CHOICES, MODEL_IDS, get_settings
 from detektor.llm import GeminiJudge
 from detektor.models import Report
 from detektor.pipeline import analyze_text
@@ -25,11 +25,17 @@ _templates = Jinja2Templates(directory=str(_BASE / "templates"))
 
 class AnalyzeRequest(BaseModel):
     text: str = Field(min_length=1)
+    model: str | None = None
 
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
     return _templates.TemplateResponse(request, "index.html")
+
+
+@app.get("/api/models")
+def models() -> dict:
+    return {"models": MODEL_CHOICES, "default": get_settings().gemini_model}
 
 
 @app.post("/api/analyze", response_model=Report)
@@ -40,6 +46,10 @@ def analyze(req: AnalyzeRequest) -> Report:
             status_code=413,
             detail=f"Tekst za długi (max {settings.max_text_chars} znaków).",
         )
+    if req.model:
+        if req.model not in MODEL_IDS:
+            raise HTTPException(status_code=400, detail="Nieznany model LLM.")
+        settings = settings.model_copy(update={"gemini_model": req.model})
     return analyze_text(req.text, settings=settings)
 
 

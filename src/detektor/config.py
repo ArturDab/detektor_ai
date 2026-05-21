@@ -6,6 +6,19 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Modele Gemini wybieralne w UI (id musi byc rozpoznawane przez API klucza).
+# Modele "live"/voice pomijamy - nie nadaja sie do strukturalnego JSON.
+MODEL_CHOICES: list[dict[str, str]] = [
+    {"id": "gemini-3.5-flash", "label": "Gemini 3.5 Flash — najnowszy, szybki"},
+    {"id": "gemini-3-flash-preview", "label": "Gemini 3 Flash (preview)"},
+    {"id": "gemini-3.1-flash-lite", "label": "Gemini 3.1 Flash-Lite — najszybszy, tani"},
+    {"id": "gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro (preview)"},
+    {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro — reasoning"},
+    {"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash — zbalansowany"},
+]
+
+MODEL_IDS: frozenset[str] = frozenset(m["id"] for m in MODEL_CHOICES)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

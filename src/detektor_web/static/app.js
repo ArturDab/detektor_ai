@@ -191,6 +191,25 @@ function renderReport(r) {
   $("results").classList.remove("hidden");
 }
 
+async function loadModels() {
+  try {
+    const resp = await fetch("/api/models");
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const sel = $("model");
+    sel.innerHTML = (data.models || [])
+      .map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.label)}</option>`)
+      .join("");
+    const saved = localStorage.getItem("detektor_model");
+    const ids = (data.models || []).map((m) => m.id);
+    sel.value = ids.includes(saved) ? saved : data.default;
+    if (!sel.value && ids.length) sel.value = ids[0];
+    sel.addEventListener("change", () => localStorage.setItem("detektor_model", sel.value));
+  } catch (e) {
+    // Brak listy modeli - analiza pojdzie modelem domyslnym z serwera.
+  }
+}
+
 async function analyze() {
   const text = $("text").value.trim();
   if (!text) {
@@ -201,10 +220,11 @@ async function analyze() {
   $("analyze").classList.add("loading");
   $("status").textContent = "Analizuję...";
   try {
+    const model = $("model").value || undefined;
     const resp = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, model }),
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
@@ -222,3 +242,4 @@ async function analyze() {
 }
 
 $("analyze").addEventListener("click", analyze);
+loadModels();
