@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     enable_llm: bool = True
     llm_timeout_s: float = 20.0
     llm_max_retries: int = 1
+    # Humanizacja: krotszy timeout i rownoleglosc, by request nie ciagnal sie minutami.
+    rewrite_timeout_s: float = 12.0
+    rewrite_concurrency: int = 8
 
     # --- Segmentacja ---
     use_spacy: bool = False
