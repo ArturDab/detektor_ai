@@ -17,28 +17,28 @@ _FLAGS = re.IGNORECASE | re.UNICODE
 _LEAKS: list[tuple[re.Pattern, str]] = [
     (
         re.compile(r"\bjako (?:model językowy|sztuczna inteligencja|AI)\b", _FLAGS),
-        "Wyciek: tekst ujawnia, ze pisal go model AI.",
+        "Wyciek: tekst ujawnia, że pisał go model AI.",
     ),
     (
         re.compile(
             r"\bnie (?:mam|posiadam) dostępu do (?:internetu|danych|informacji|aktualnych)", _FLAGS
         ),
-        "Wyciek: typowa formula asystenta AI.",
+        "Wyciek: typowa formuła asystenta AI.",
     ),
     (
         re.compile(r"\bwedług mojej wiedzy na dzień\b", _FLAGS),
-        "Wyciek: formula o dacie wiedzy modelu.",
+        "Wyciek: formuła o dacie wiedzy modelu.",
     ),
     (
         re.compile(r"\b(?:data|dzień) ostatniej aktualizacji\b", _FLAGS),
-        "Wyciek: odwolanie do aktualizacji modelu.",
+        "Wyciek: odwołanie do aktualizacji modelu.",
     ),
-    (re.compile(r"\bas an AI language model\b", _FLAGS), "Wyciek: angielska formula modelu AI."),
+    (re.compile(r"\bas an AI language model\b", _FLAGS), "Wyciek: angielska formuła modelu AI."),
     (
         re.compile(
             r"\bnie jestem w stanie (?:przeglądać|przeszukiwać) (?:internetu|sieci)\b", _FLAGS
         ),
-        "Wyciek: formula asystenta AI.",
+        "Wyciek: formuła asystenta AI.",
     ),
 ]
 
@@ -49,18 +49,18 @@ _CALQUES: list[tuple[re.Pattern, str, str | None]] = [
             _FLAGS,
         ),
         "Kalka 'dedykowany' (z ang. dedicated).",
-        "Uzyj: przeznaczony/stworzony dla.",
+        "Użyj: przeznaczony/stworzony dla.",
     ),
-    (re.compile(r"\bw oparciu o\b", _FLAGS), "Biurokratyzm/kalka.", "Uzyj: na podstawie."),
+    (re.compile(r"\bw oparciu o\b", _FLAGS), "Biurokratyzm/kalka.", "Użyj: na podstawie."),
     (
         re.compile(r"\b(?:adres\w+|zaadres\w+) (?:problem|potrzeb|wyzwani|kwesti)\w*\b", _FLAGS),
-        "Kalka 'adresowac' (z ang. address).",
-        "Uzyj: odpowiadac na / rozwiazywac.",
+        "Kalka 'adresować' (z ang. address).",
+        "Użyj: odpowiadać na / rozwiązywać.",
     ),
-    (re.compile(r"\bna ten moment\b", _FLAGS), "Kalka 'at the moment'.", "Uzyj: obecnie / teraz."),
+    (re.compile(r"\bna ten moment\b", _FLAGS), "Kalka 'at the moment'.", "Użyj: obecnie / teraz."),
     (
         re.compile(r"\bdostarcza\w* wartoś\w+\b", _FLAGS),
-        "Korpokalka 'dostarczac wartosc'.",
+        "Korpokalka 'dostarczać wartość'.",
         "Napisz konkretnie, co to daje.",
     ),
 ]
@@ -125,7 +125,7 @@ class PunctuationCalqueAnalyzer:
                         start=s.start + m.start(),
                         end=s.start + m.end(),
                         severity=Severity.info,
-                        message="Przecinek po laczniku na poczatku zdania (typowy tik AI).",
+                        message="Przecinek po łączniku na początku zdania (typowy tik AI).",
                         matched_text=m.group(0),
                     )
                 )

@@ -78,8 +78,8 @@ class LexicalDiversityAnalyzer:
                             start=toks[0].start,
                             end=toks[1].end,
                             severity=Severity.low,
-                            message=f"Powtarzalny poczatek: '{toks[0].text} {toks[1].text}'.",
-                            suggestion="Zroznicuj poczatki kolejnych zdan.",
+                            message=f"Powtarzalny początek: '{toks[0].text} {toks[1].text}'.",
+                            suggestion="Zróżnicuj początki kolejnych zdań.",
                         )
                     )
         ratio = repeated / eligible if eligible else 0.0
