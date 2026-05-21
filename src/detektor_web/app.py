@@ -38,7 +38,7 @@ def analyze(req: AnalyzeRequest) -> Report:
     if len(req.text) > settings.max_text_chars:
         raise HTTPException(
             status_code=413,
-            detail=f"Tekst za dlugi (max {settings.max_text_chars} znakow).",
+            detail=f"Tekst za długi (max {settings.max_text_chars} znaków).",
         )
     return analyze_text(req.text, settings=settings)
 

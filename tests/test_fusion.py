@@ -22,7 +22,7 @@ def test_heuristics_only_caps_confidence_and_adds_note():
     assert r.ai_provenance.confidence <= s.heuristics_only_conf_cap_ai + 1e-9
     assert r.slop.confidence <= s.heuristics_only_conf_cap_slop + 1e-9
     assert r.llm_available is False
-    assert any("niedostepny" in n.lower() for n in r.notes)
+    assert any("niedostępny" in n.lower() for n in r.notes)
     # srednia wazona rownych wynikow = 50
     assert abs(r.slop.score - 50.0) < 1e-6
 
@@ -39,7 +39,7 @@ def test_llm_error_propagates_to_report_and_notes():
         llm_error="NotFound: 404 model not found",
     )
     assert r.llm_error == "NotFound: 404 model not found"
-    assert any("Powod: NotFound" in n for n in r.notes)
+    assert any("Powód: NotFound" in n for n in r.notes)
 
 
 def test_bands_track_score():
