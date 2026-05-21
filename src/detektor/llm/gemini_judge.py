@@ -41,8 +41,11 @@ class GeminiJudge:
             try:
                 return self._parse(self._generate(text))
             except Exception as exc:  # noqa: BLE001 - LLM zawsze opcjonalny
-                self.last_error = f"{type(exc).__name__}: {exc}"[:300]
-                log.warning("Gemini: proba %d/%d nieudana: %s", i + 1, attempts, exc)
+                detail = str(exc).strip()
+                self.last_error = (
+                    f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
+                )[:300]
+                log.warning("Gemini: proba %d/%d nieudana: %s", i + 1, attempts, self.last_error)
         log.error(
             "Gemini: wszystkie proby nieudane (model=%s): %s",
             self.settings.gemini_model,

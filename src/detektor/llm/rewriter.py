@@ -49,8 +49,15 @@ class GeminiRewriter:
                     out.append(p)
             return out[:n]
         except Exception as exc:  # noqa: BLE001 - humanizacja zawsze opcjonalna
-            self.last_error = f"{type(exc).__name__}: {exc}"[:300]
-            log.warning("Gemini rewrite nieudany (model=%s): %s", self.settings.gemini_model, exc)
+            detail = str(exc).strip()
+            self.last_error = (f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__)[
+                :300
+            ]
+            log.warning(
+                "Gemini rewrite nieudany (model=%s): %s",
+                self.settings.gemini_model,
+                self.last_error,
+            )
             return []
 
     def _generate(self, quote: str, context: str, reason: str, n: int) -> str | RewriteProposals:
@@ -74,7 +81,7 @@ class GeminiRewriter:
             )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            response = executor.submit(_call).result(timeout=self.settings.llm_timeout_s)
+            response = executor.submit(_call).result(timeout=self.settings.rewrite_timeout_s)
 
         parsed = getattr(response, "parsed", None)
         if isinstance(parsed, RewriteProposals):
