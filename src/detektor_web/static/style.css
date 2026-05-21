@@ -137,6 +137,29 @@ button.loading::after {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.model-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.model-pick select {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.model-pick select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.08);
+}
+
 .status { color: var(--muted); font-size: 14px; }
 
 .results.hidden, .hidden { display: none; }

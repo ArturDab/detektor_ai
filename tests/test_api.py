@@ -33,3 +33,26 @@ def test_analyze_endpoint(monkeypatch):
 def test_analyze_rejects_empty():
     r = client.post("/api/analyze", json={"text": ""})
     assert r.status_code == 422
+
+
+def test_models_endpoint():
+    r = client.get("/api/models")
+    assert r.status_code == 200
+    data = r.json()
+    assert isinstance(data["models"], list) and data["models"]
+    assert all("id" in m and "label" in m for m in data["models"])
+    assert "default" in data
+
+
+def test_analyze_rejects_unknown_model():
+    r = client.post("/api/analyze", json={"text": "Przykładowy tekst.", "model": "nope-123"})
+    assert r.status_code == 400
+
+
+def test_analyze_accepts_known_model(monkeypatch):
+    monkeypatch.setattr(GeminiJudge, "available", lambda self: False)
+    r = client.post(
+        "/api/analyze",
+        json={"text": "Przykładowy tekst do analizy w teście.", "model": "gemini-2.5-flash"},
+    )
+    assert r.status_code == 200
