@@ -1,0 +1,25 @@
+name: Deploy to Railway
+
+# Deploy z runnera GitHuba (ma pelny dostep do sieci) zamiast polegac na
+# polaczeniu GitHub App <-> Railway. Wymaga sekretu repo RAILWAY_TOKEN
+# (Railway -> projekt detektor-ai -> Settings -> Tokens, token srodowiska production).
+
+on:
+  push:
+    branches: [claude/ai-slop-detection-tool-ye7nw]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service web --ci
