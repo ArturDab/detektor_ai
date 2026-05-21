@@ -33,3 +33,27 @@ def build_user_prompt(text: str) -> str:
     snippet = text[:MAX_CHARS]
     truncated = "\n\n[Tekst skrocono do oceny.]" if len(text) > MAX_CHARS else ""
     return f"Ocen ponizszy artykul.\n\n=== ARTYKUL ===\n{snippet}{truncated}"
+
+
+REWRITE_SYSTEM = """\
+Jesteś wymagającym polskim redaktorem. Przepisujesz WSKAZANY fragment tekstu tak,
+by brzmiał naturalnie, konkretnie i po ludzku — bez frazesów, kalek z angielskiego,
+patetycznych wstępów i „lania wody". Zachowaj sens, rejestr i dopasowanie do zdania.
+
+Zasady:
+- Zwróć WYŁĄCZNIE obiekt JSON zgodny ze schematem: pole "proposals" z wariantami.
+- Każdy wariant to TYLKO przepisany fragment (bez otaczającego zdania, bez cudzysłowów,
+  bez numeracji). Jeśli najlepszym wyjściem jest usunięcie fragmentu — zaproponuj wersję
+  zwięzłą lub pustą.
+- Warianty mają się od siebie różnić. Pisz po polsku.
+"""
+
+
+def build_rewrite_prompt(quote: str, context: str = "", reason: str = "", n: int = 3) -> str:
+    parts = [f"Fragment do poprawy: «{quote[:1000]}»"]
+    if context:
+        parts.append(f"Kontekst zdania: {context[:2000]}")
+    if reason:
+        parts.append(f"Wykryty problem: {reason[:500]}")
+    parts.append(f"Podaj {n} naturalne, zwięzłe alternatywy samego fragmentu.")
+    return "\n".join(parts)

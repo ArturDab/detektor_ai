@@ -251,7 +251,8 @@ button.loading::after {
   font-size: 15px;
   line-height: 1.7;
 }
-mark { border-radius: 4px; padding: 0 3px; color: var(--text); cursor: help; }
+mark { border-radius: 4px; padding: 0 3px; color: var(--text); cursor: pointer; }
+mark:hover { filter: brightness(0.94); }
 .sev-high { background: #fde2e1; border-bottom: 2px solid var(--red); }
 .sev-medium { background: #ffedd5; border-bottom: 2px solid var(--orange); }
 .sev-low { background: #fef9c3; border-bottom: 2px solid var(--yellow); }
@@ -269,9 +270,59 @@ mark { border-radius: 4px; padding: 0 3px; color: var(--text); cursor: help; }
   padding: 12px 14px;
   font-size: 14px;
 }
+.finding { border-left: 3px solid var(--muted-2); }
+.finding.sev-high { border-left-color: var(--red); }
+.finding.sev-medium { border-left-color: var(--orange); }
+.finding.sev-low { border-left-color: var(--yellow); }
+.finding.sev-info { border-left-color: #2563eb; }
 .finding .quote { font-weight: 600; }
 .finding .sug { color: var(--green); font-size: 13px; margin-top: 2px; }
 .finding .src { color: var(--muted-2); font-size: 12px; margin-top: 4px; }
+.finding .show-props {
+  margin-top: 8px; font-size: 12px; font-weight: 600; padding: 5px 10px;
+  background: #fff; color: var(--text); border: 1px solid var(--border-strong); border-radius: 7px;
+}
+.finding .show-props:hover { background: #f5f5f5; opacity: 1; }
+
+/* ---------- Actions / humanize ---------- */
+.actions { display: flex; align-items: center; gap: 12px; }
+.btn-secondary {
+  background: #fff; color: var(--text); border: 1px solid var(--border-strong);
+  font-weight: 600; font-size: 14px; padding: 9px 16px; border-radius: 8px;
+}
+.btn-secondary:hover { background: #f5f5f5; opacity: 1; }
+
+/* ---------- Popover (propozycje przepisania) ---------- */
+.popover {
+  position: absolute; z-index: 50; width: min(380px, 92vw);
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16); padding: 14px;
+}
+.popover.hidden { display: none; }
+.pop-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.pop-quote { font-weight: 650; font-size: 14px; }
+.pop-close {
+  background: none; border: 0; font-size: 20px; line-height: 1; color: var(--muted);
+  cursor: pointer; padding: 0 4px;
+}
+.pop-reason { color: var(--muted); font-size: 12.5px; margin: 4px 0 10px; }
+.pop-list { display: grid; gap: 8px; }
+.pop-list .pop-opt {
+  text-align: left; width: 100%; background: #fafafa; color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 13.5px;
+  cursor: pointer; font-family: inherit;
+}
+.pop-list .pop-opt:hover { background: #eef6ff; border-color: #bcd9ff; opacity: 1; }
+.pop-list .pop-empty { color: var(--muted); font-size: 13px; }
+.pop-custom { display: flex; gap: 8px; margin-top: 12px; }
+.pop-custom input {
+  flex: 1; font-family: inherit; font-size: 13.5px; padding: 8px 10px;
+  border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); background: #fff;
+}
+.pop-custom input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(23,23,23,0.08); }
+.pop-custom button {
+  font-size: 13px; padding: 8px 14px; border-radius: 8px;
+}
 
 @media (max-width: 720px) {
   .scores { grid-template-columns: 1fr; }

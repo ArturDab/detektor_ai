@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from detektor.llm import GeminiJudge
+from detektor.llm.rewriter import GeminiRewriter
 from detektor_web.app import app
 
 client = TestClient(app)
@@ -56,3 +57,29 @@ def test_analyze_accepts_known_model(monkeypatch):
         json={"text": "Przykładowy tekst do analizy w teście.", "model": "gemini-2.5-flash"},
     )
     assert r.status_code == 200
+
+
+def test_rewrite_no_key(monkeypatch):
+    monkeypatch.setattr(GeminiRewriter, "available", lambda self: False)
+    r = client.post("/api/rewrite", json={"quote": "warto zauważyć"})
+    assert r.status_code == 200
+    assert r.json()["proposals"] == []
+    assert r.json()["error"]
+
+
+def test_rewrite_with_mock(monkeypatch):
+    monkeypatch.setattr(GeminiRewriter, "available", lambda self: True)
+    monkeypatch.setattr(
+        GeminiRewriter, "rewrite", lambda self, q, c="", r="", n=3: ["wariant 1", "wariant 2"]
+    )
+    r = client.post("/api/rewrite", json={"quote": "warto zauważyć", "reason": "frazes"})
+    assert r.status_code == 200
+    assert r.json()["proposals"] == ["wariant 1", "wariant 2"]
+
+
+def test_humanize_no_key(monkeypatch):
+    monkeypatch.setattr(GeminiRewriter, "available", lambda self: False)
+    r = client.post("/api/humanize", json={"text": "Warto zauważyć, że to tekst."})
+    assert r.status_code == 200
+    assert r.json()["text"] == "Warto zauważyć, że to tekst."
+    assert r.json()["error"]

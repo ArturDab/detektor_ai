@@ -26,3 +26,9 @@ class GeminiVerdict(BaseModel):
     dimensions: Dimensions = Field(default_factory=Dimensions)
     flagged_passages: list[FlaggedPassageLLM] = Field(default_factory=list)
     overall_explanation: str = ""
+
+
+class RewriteProposals(BaseModel):
+    """Propozycje przepisania fragmentu na bardziej ludzki."""
+
+    proposals: list[str] = Field(default_factory=list)
