@@ -145,7 +145,7 @@ button.loading::after {
 
 .status { color: var(--muted); font-size: 14px; }
 
-.results.hidden, .hidden { display: none; }
+.results.hidden, .hidden { display: none !important; }
 .results { display: grid; gap: 18px; }
 
 /* ---------- Pasek akcji (kopiowanie/humanizacja) ---------- */
