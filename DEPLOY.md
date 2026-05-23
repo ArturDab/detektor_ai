@@ -1,7 +1,9 @@
 # Handoff: wdrożenie na Railway
 
-Dokument dla kolejnej sesji (z działającym Railway MCP). Aplikacja jest gotowa;
-projekt na Railway już istnieje, repo jest podłączone — zostaje dokończyć deploy.
+> **STATUS: WDROŻONE (historyczny dokument).** Aplikacja jest live na Railway
+> (auto-deploy z gałęzi `claude/ai-slop-detection-tool-ye7nw`). Aktualny stan i
+> dalsze kroki: **`CLAUDE.md`** i **`docs/HANDOFF.md`**. Poniższa treść opisuje
+> stan SPRZED wdrożenia — zachowana dla kontekstu (ID projektu/środowiska/serwisu).
 
 ## STAN NA TERAZ (czytaj najpierw)
 - Kod kompletny i wypchnięty. Najnowszy commit na gałęzi: ostatni na
