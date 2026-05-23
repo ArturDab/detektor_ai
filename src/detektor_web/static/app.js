@@ -145,7 +145,7 @@ function renderFindings(findings) {
           .map((p, j) => `<button class="prop-opt" data-idx="${i}" data-prop="${j}">${escapeHtml(p)}</button>`)
           .join("");
         action = `<div class="props">${opts}</div>
-          <div class="prop-preview hidden" data-idx="${i}"></div>
+          <div class="prop-preview" data-idx="${i}">${PREVIEW_HINT}</div>
           <div class="prop-custom-inline">
             <input type="text" data-idx="${i}" placeholder="Wpisz własną wersję..." />
             <button class="prop-custom-apply" data-idx="${i}">Zastosuj</button>
@@ -253,6 +253,8 @@ function applyReplacement(idx, replacement) {
   closePopover();
   $("status").textContent = 'Zastosowano zmianę. Kliknij „Analizuj", aby odświeżyć oceny.';
 }
+
+const PREVIEW_HINT = `<span class="prop-preview-hint">Najedź na propozycję, aby zobaczyć ją w zdaniu.</span>`;
 
 function previewHTML(f, proposal) {
   const quote = CURRENT.text.slice(f.start, f.end);
@@ -449,12 +451,11 @@ $("findings").addEventListener("mouseover", (e) => {
   const prev = opt.closest(".finding").querySelector(".prop-preview");
   if (f && prev) {
     prev.innerHTML = previewHTML(f, f.proposals[Number(opt.dataset.prop)]);
-    prev.classList.remove("hidden");
   }
 });
 $("findings").addEventListener("mouseout", (e) => {
   const opt = e.target.closest(".prop-opt");
-  if (opt) opt.closest(".finding").querySelector(".prop-preview").classList.add("hidden");
+  if (opt) opt.closest(".finding").querySelector(".prop-preview").innerHTML = PREVIEW_HINT;
 });
 
 $("pop-close").addEventListener("click", closePopover);
