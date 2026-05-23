@@ -14,19 +14,29 @@ def analyze_text(
     text: str,
     settings: Settings | None = None,
     judge: GeminiJudge | None = None,
+    use_llm: bool = True,
 ) -> Report:
-    """Przeanalizuj tekst i zwroc kompletny raport (heurystyki + opcjonalnie LLM)."""
+    """Przeanalizuj tekst i zwroc kompletny raport (heurystyki + opcjonalnie LLM).
+
+    use_llm=False wymusza tryb wylacznie heurystyczny (szybki, bez wywolan LLM) —
+    uzywane do przeliczania ocen na biezaco po edycji fragmentow.
+    """
     settings = settings or get_settings()
     text = text or ""
 
     doc = segment(text, use_spacy=settings.use_spacy)
     results = [analyzer.analyze(doc) for analyzer in default_analyzers(settings)]
 
-    if judge is None:
-        judge = GeminiJudge(settings)
-    judge_available = judge.available()
-    verdict = judge.judge(text) if judge_available else None
-    llm_error = judge.last_error if (judge_available and verdict is None) else None
+    if not use_llm:
+        judge_available = False
+        verdict = None
+        llm_error = None
+    else:
+        if judge is None:
+            judge = GeminiJudge(settings)
+        judge_available = judge.available()
+        verdict = judge.judge(text) if judge_available else None
+        llm_error = judge.last_error if (judge_available and verdict is None) else None
 
     return fuse(
         text=text,
