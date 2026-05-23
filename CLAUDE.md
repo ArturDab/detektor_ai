@@ -3,6 +3,9 @@
 Zwięzły, operacyjny przewodnik dla Claude Code. Szczegóły sesyjne: `docs/HANDOFF.md`.
 Decyzje: `docs/DECISIONS.md`. Pełny opis funkcji: `README.md`.
 
+## 0. Zasady odpowiedzi
+- **Na końcu KAŻDEJ odpowiedzi** dodaj klikalny link do aplikacji produkcyjnej: <https://detektor-ai.up.railway.app>
+
 ## 1. Opis projektu
 Webowe narzędzie wykrywające „AI slop" w artykułach **po polsku**. Zwraca dwa
 niezależne wskaźniki 0–100 (**slop/jakość** oraz **prawdopodobieństwo autorstwa AI**),
