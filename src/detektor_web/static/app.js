@@ -324,7 +324,7 @@ async function openRewrite(idx, anchor) {
   $("pop-quote").textContent = quote.length > 60 ? quote.slice(0, 60) + "…" : quote;
   $("pop-reason").textContent = f.message + (f.suggestion ? "  →  " + f.suggestion : "");
   $("pop-input").value = "";
-  $("pop-preview").classList.add("hidden");
+  $("pop-preview").innerHTML = PREVIEW_HINT;
   positionPopover(anchor);
 
   // Propozycje policzone juz przy analizie -> pokazujemy od razu, bez dogenerowywania.
@@ -402,6 +402,15 @@ async function humanizeAll() {
   }
 }
 
+// Tryby lewego okna: edycja (textarea), ladowanie (spinner), podglad (podswietlenia).
+function setLeftMode(mode) {
+  $("text").classList.toggle("hidden", mode !== "edit");
+  $("text-loader").classList.toggle("hidden", mode !== "loading");
+  $("highlighted").classList.toggle("hidden", mode !== "view");
+  $("legend").classList.toggle("hidden", mode !== "view");
+  $("edit-text").classList.toggle("hidden", mode !== "view");
+}
+
 async function analyze() {
   const text = $("text").value.trim();
   if (!text) {
@@ -412,6 +421,7 @@ async function analyze() {
   $("analyze").classList.add("loading");
   $("status").textContent = "Analizuję...";
   closePopover();
+  setLeftMode("loading");
   try {
     const humanize = $("with-humanize").checked;
     if (humanize) $("status").textContent = "Analizuję i generuję propozycje…";
@@ -426,8 +436,10 @@ async function analyze() {
     }
     const report = await resp.json();
     renderReport(report);
+    setLeftMode("view");
     $("status").textContent = `Gotowe (${report.word_count} słów).`;
   } catch (e) {
+    setLeftMode("edit");
     $("status").textContent = "Błąd: " + e.message;
   } finally {
     $("analyze").disabled = false;
@@ -457,9 +469,14 @@ async function loadModels() {
 // ---------- Wiazanie zdarzen ----------
 
 $("analyze").addEventListener("click", analyze);
-$("reanalyze").addEventListener("click", analyze);
 $("humanize-all").addEventListener("click", humanizeAll);
 $("copy-all").addEventListener("click", copyAll);
+$("edit-text").addEventListener("click", () => {
+  $("text").value = CURRENT.text || $("text").value;
+  setLeftMode("edit");
+  closePopover();
+  $("text").focus();
+});
 
 $("highlighted").addEventListener("click", (e) => {
   const mark = e.target.closest("mark[data-idx]");
@@ -516,10 +533,9 @@ $("pop-list").addEventListener("mouseover", (e) => {
   const j = Number(opt.dataset.prop);
   if (f && props[j] != null) {
     $("pop-preview").innerHTML = previewHTML(f, props[j]);
-    $("pop-preview").classList.remove("hidden");
   }
 });
-$("pop-list").addEventListener("mouseout", () => $("pop-preview").classList.add("hidden"));
+$("pop-list").addEventListener("mouseout", () => ($("pop-preview").innerHTML = PREVIEW_HINT));
 $("pop-apply").addEventListener("click", () => {
   const val = $("pop-input").value.trim();
   if (val) applyReplacement(Number($("popover").dataset.idx), val);
