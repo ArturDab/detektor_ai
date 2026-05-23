@@ -145,7 +145,7 @@ function renderFindings(findings) {
           .map((p, j) => `<button class="prop-opt" data-idx="${i}" data-prop="${j}">${escapeHtml(p)}</button>`)
           .join("");
         action = `<div class="props">${opts}</div>
-          <div class="prop-preview hidden" data-idx="${i}"></div>
+          <div class="prop-preview" data-idx="${i}">${PREVIEW_HINT}</div>
           <div class="prop-custom-inline">
             <input type="text" data-idx="${i}" placeholder="Wpisz własną wersję..." />
             <button class="prop-custom-apply" data-idx="${i}">Zastosuj</button>
@@ -181,12 +181,10 @@ function renderLlmError(err) {
   }
 }
 
-function renderReport(r) {
-  CURRENT.text = r.text;
-  CURRENT.findings = (r.findings || []).map((f) => ({ ...f }));
-
+// Aktualizuje wylacznie wskazniki (gauge/werdykt/breakdown) — uzywane tez przy
+// przeliczaniu na biezaco, bez ruszania listy fragmentow/podswietlen.
+function renderScores(r) {
   renderVerdict(r);
-  renderLlmError(r.llm_error);
 
   $("gauge-slop").innerHTML = gauge(r.slop.score);
   $("band-slop").textContent = bandSlop(r.slop.score);
@@ -197,7 +195,14 @@ function renderReport(r) {
   $("band-ai").textContent = bandAi(r.ai_provenance.score);
   $("conf-ai").textContent = `pewność: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
   $("break-ai").innerHTML = breakdownHtml(r.ai_provenance.breakdown);
+}
 
+function renderReport(r) {
+  CURRENT.text = r.text;
+  CURRENT.findings = (r.findings || []).map((f) => ({ ...f }));
+
+  renderScores(r);
+  renderLlmError(r.llm_error);
   renderNotes(r.notes);
 
   const llmBox = $("llm-explanation");
@@ -251,8 +256,45 @@ function applyReplacement(idx, replacement) {
   $("highlighted").innerHTML = renderHighlighted(CURRENT.text, CURRENT.findings);
   renderFindings(CURRENT.findings);
   closePopover();
-  $("status").textContent = 'Zastosowano zmianę. Kliknij „Analizuj", aby odświeżyć oceny.';
+  refreshScores();
 }
+
+// Przelicza oceny na biezaco (tryb heurystyczny, bez LLM) po edycji fragmentu.
+// Aktualizuje tylko wskazniki — lista propozycji i podswietlenia pozostaja lokalne.
+let _scoreSeq = 0;
+async function refreshScores() {
+  const seq = ++_scoreSeq;
+  $("status").textContent = "Przeliczam oceny…";
+  try {
+    const resp = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: CURRENT.text, model: selectedModel(), judge: false }),
+    });
+    if (!resp.ok || seq !== _scoreSeq) return;
+    const r = await resp.json();
+    if (seq !== _scoreSeq) return;
+    renderScores(r);
+    $("status").textContent =
+      'Oceny przeliczone heurystycznie. „Pełna ocena (LLM)" uruchamia sędziego.';
+  } catch (e) {
+    if (seq === _scoreSeq) $("status").textContent = "Nie udało się przeliczyć ocen.";
+  }
+}
+
+async function copyAll() {
+  const text = $("text").value;
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    $("humanize-status").textContent = "Skopiowano cały tekst do schowka.";
+  } catch (e) {
+    $("text").select();
+    $("humanize-status").textContent = "Zaznaczono tekst — skopiuj ręcznie (Ctrl/Cmd+C).";
+  }
+}
+
+const PREVIEW_HINT = `<span class="prop-preview-hint">Najedź na propozycję, aby zobaczyć ją w zdaniu.</span>`;
 
 function previewHTML(f, proposal) {
   const quote = CURRENT.text.slice(f.start, f.end);
@@ -415,7 +457,9 @@ async function loadModels() {
 // ---------- Wiazanie zdarzen ----------
 
 $("analyze").addEventListener("click", analyze);
+$("reanalyze").addEventListener("click", analyze);
 $("humanize-all").addEventListener("click", humanizeAll);
+$("copy-all").addEventListener("click", copyAll);
 
 $("highlighted").addEventListener("click", (e) => {
   const mark = e.target.closest("mark[data-idx]");
@@ -449,12 +493,11 @@ $("findings").addEventListener("mouseover", (e) => {
   const prev = opt.closest(".finding").querySelector(".prop-preview");
   if (f && prev) {
     prev.innerHTML = previewHTML(f, f.proposals[Number(opt.dataset.prop)]);
-    prev.classList.remove("hidden");
   }
 });
 $("findings").addEventListener("mouseout", (e) => {
   const opt = e.target.closest(".prop-opt");
-  if (opt) opt.closest(".finding").querySelector(".prop-preview").classList.add("hidden");
+  if (opt) opt.closest(".finding").querySelector(".prop-preview").innerHTML = PREVIEW_HINT;
 });
 
 $("pop-close").addEventListener("click", closePopover);

@@ -40,71 +40,78 @@
     </section>
 
     <section id="results" class="results hidden">
-      <!-- Jednozdaniowy werdykt 2x2 -->
-      <div id="verdict" class="verdict card">
-        <div id="verdict-headline" class="verdict-headline"></div>
-        <div id="verdict-sub" class="verdict-sub"></div>
-      </div>
-
-      <div class="actions">
+      <div class="results-bar card">
+        <button id="copy-all" class="btn-copy">Kopiuj cały tekst</button>
+        <button id="reanalyze" class="btn-secondary">Pełna ocena (LLM)</button>
         <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
         <span id="humanize-status" class="status"></span>
       </div>
 
-      <div id="llm-error" class="alert alert-error hidden"></div>
-      <div id="notes" class="notes"></div>
-
-      <div class="scores">
-        <div class="score-card card">
-          <div class="score-head">
-            <h2>Jakość tekstu</h2>
-            <span class="score-hint">0 = rzetelny tekst · 100 = czysty „slop"</span>
+      <div class="two-col">
+        <div class="col-left">
+          <div class="panel card">
+            <h3>Tekst z podświetleniami</h3>
+            <div class="legend">
+              <span class="chip sev-high">wysoki</span>
+              <span class="chip sev-medium">średni</span>
+              <span class="chip sev-low">niski</span>
+              <span class="chip sev-info">info</span>
+            </div>
+            <div id="highlighted" class="highlighted"></div>
           </div>
-          <div id="gauge-slop" class="gauge-wrap"></div>
-          <div id="band-slop" class="band"></div>
-          <details class="details">
-            <summary>Szczegóły oceny</summary>
-            <div id="conf-slop" class="conf"></div>
-            <div id="break-slop" class="breakdown"></div>
-          </details>
         </div>
-        <div class="score-card card">
-          <div class="score-head">
-            <h2>Sygnał autorstwa AI</h2>
-            <span class="score-hint">0 = raczej człowiek · 100 = raczej AI</span>
+
+        <div class="col-right">
+          <div id="verdict" class="verdict card">
+            <div id="verdict-headline" class="verdict-headline"></div>
+            <div id="verdict-sub" class="verdict-sub"></div>
           </div>
-          <div id="gauge-ai" class="gauge-wrap"></div>
-          <div id="band-ai" class="band"></div>
-          <details class="details">
-            <summary>Szczegóły oceny</summary>
-            <div id="conf-ai" class="conf"></div>
-            <div id="break-ai" class="breakdown"></div>
-            <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
-          </details>
+
+          <div id="llm-error" class="alert alert-error hidden"></div>
+          <div id="notes" class="notes"></div>
+
+          <div class="scores">
+            <div class="score-card card">
+              <div class="score-head">
+                <h2>Jakość tekstu</h2>
+                <span class="score-hint">0 = rzetelny tekst · 100 = czysty „slop"</span>
+              </div>
+              <div id="gauge-slop" class="gauge-wrap"></div>
+              <div id="band-slop" class="band"></div>
+              <details class="details">
+                <summary>Szczegóły oceny</summary>
+                <div id="conf-slop" class="conf"></div>
+                <div id="break-slop" class="breakdown"></div>
+              </details>
+            </div>
+            <div class="score-card card">
+              <div class="score-head">
+                <h2>Sygnał autorstwa AI</h2>
+                <span class="score-hint">0 = raczej człowiek · 100 = raczej AI</span>
+              </div>
+              <div id="gauge-ai" class="gauge-wrap"></div>
+              <div id="band-ai" class="band"></div>
+              <details class="details">
+                <summary>Szczegóły oceny</summary>
+                <div id="conf-ai" class="conf"></div>
+                <div id="break-ai" class="breakdown"></div>
+                <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
+              </details>
+            </div>
+          </div>
+
+          <div id="llm-explanation" class="llm-box card hidden"></div>
+
+          <div class="panel card">
+            <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
+            <div id="dimensions" class="dimensions">Brak danych z LLM (tryb heurystyczny).</div>
+          </div>
+
+          <div class="panel card">
+            <h3>Propozycje zmian <span id="findings-count" class="muted"></span></h3>
+            <ul id="findings" class="findings"></ul>
+          </div>
         </div>
-      </div>
-
-      <div id="llm-explanation" class="llm-box card hidden"></div>
-
-      <div class="panel card">
-        <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
-        <div id="dimensions" class="dimensions">Brak danych z LLM (tryb heurystyczny).</div>
-      </div>
-
-      <div class="panel card">
-        <h3>Tekst z podświetleniami</h3>
-        <div class="legend">
-          <span class="chip sev-high">wysoki</span>
-          <span class="chip sev-medium">średni</span>
-          <span class="chip sev-low">niski</span>
-          <span class="chip sev-info">info</span>
-        </div>
-        <div id="highlighted" class="highlighted"></div>
-      </div>
-
-      <div class="panel card">
-        <h3>Wykryte fragmenty <span id="findings-count" class="muted"></span></h3>
-        <ul id="findings" class="findings"></ul>
       </div>
     </section>
   </main>

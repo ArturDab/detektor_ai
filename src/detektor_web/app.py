@@ -30,6 +30,7 @@ class AnalyzeRequest(BaseModel):
     text: str = Field(min_length=1)
     model: str | None = None
     humanize: bool = False
+    judge: bool = True
 
 
 class RewriteRequest(BaseModel):
@@ -75,7 +76,7 @@ def analyze(req: AnalyzeRequest) -> Report:
             detail=f"Tekst za długi (max {settings.max_text_chars} znaków).",
         )
     settings = _with_model(settings, req.model)
-    report = analyze_text(req.text, settings=settings)
+    report = analyze_text(req.text, settings=settings, use_llm=req.judge)
     if req.humanize:
         error = attach_proposals(report, req.text, settings=settings)
         if error:
