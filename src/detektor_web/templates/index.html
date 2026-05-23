@@ -25,43 +25,49 @@
   </header>
 
   <main class="layout">
-    <section class="input-pane card">
-      <textarea id="text" placeholder="Wklej tutaj tekst artykułu po polsku..."></textarea>
-      <div class="controls">
-        <button id="analyze">Analizuj</button>
-        <label class="model-pick">Model LLM
-          <select id="model"></select>
-        </label>
-        <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
-          <input type="checkbox" id="with-humanize" /> Z propozycjami humanizacji
-        </label>
-        <span id="status" class="status"></span>
-      </div>
-    </section>
-
-    <section id="results" class="results hidden">
-      <div class="results-bar card">
-        <button id="copy-all" class="btn-copy">Kopiuj cały tekst</button>
-        <button id="reanalyze" class="btn-secondary">Pełna ocena (LLM)</button>
-        <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
-        <span id="humanize-status" class="status"></span>
-      </div>
-
-      <div class="two-col">
-        <div class="col-left">
-          <div class="panel card">
-            <h3>Tekst z podświetleniami</h3>
-            <div class="legend">
+    <div class="two-col">
+      <div class="col-left">
+        <div class="panel card text-pane">
+          <div class="text-pane-head">
+            <h3>Tekst</h3>
+            <button id="edit-text" class="btn-mini hidden">Edytuj / wklej nowy</button>
+            <div id="legend" class="legend hidden">
               <span class="chip sev-high">wysoki</span>
               <span class="chip sev-medium">średni</span>
               <span class="chip sev-low">niski</span>
               <span class="chip sev-info">info</span>
             </div>
-            <div id="highlighted" class="highlighted"></div>
+          </div>
+          <div class="text-box">
+            <textarea id="text" placeholder="Wklej tutaj tekst artykułu po polsku..."></textarea>
+            <div id="highlighted" class="highlighted hidden"></div>
+            <div id="text-loader" class="text-loader hidden">
+              <span class="spinner-lg"></span>
+              <span class="loader-cap">Analizuję tekst…</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div class="col-right">
+      <div class="col-right">
+        <div class="controls-card card">
+          <button id="analyze">Analizuj</button>
+          <label class="model-pick">Model LLM
+            <select id="model"></select>
+          </label>
+          <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
+            <input type="checkbox" id="with-humanize" /> Z propozycjami humanizacji
+          </label>
+          <span id="status" class="status"></span>
+        </div>
+
+        <div id="results" class="results hidden">
+          <div class="results-bar card">
+            <button id="copy-all" class="btn-copy">Kopiuj cały tekst</button>
+            <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
+            <span id="humanize-status" class="status"></span>
+          </div>
+
           <div id="verdict" class="verdict card">
             <div id="verdict-headline" class="verdict-headline"></div>
             <div id="verdict-sub" class="verdict-sub"></div>
@@ -113,7 +119,7 @@
           </div>
         </div>
       </div>
-    </section>
+    </div>
   </main>
 
   <div id="popover" class="popover hidden">
@@ -123,7 +129,7 @@
     </div>
     <div id="pop-reason" class="pop-reason"></div>
     <div id="pop-list" class="pop-list"></div>
-    <div id="pop-preview" class="pop-preview hidden"></div>
+    <div id="pop-preview" class="pop-preview"></div>
     <div class="pop-custom">
       <input id="pop-input" type="text" placeholder="Wpisz własną wersję..." />
       <button id="pop-apply">Zastosuj</button>
