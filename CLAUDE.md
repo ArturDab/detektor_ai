@@ -18,10 +18,10 @@ Hybryda: deterministyczne heurystyki + opcjonalny sędzia LLM (Gemini).
 - Frontend: szablon Jinja2 + **vanilla JS** + CSS (font **Geist** z Google Fonts). Brak frameworka JS, brak builda frontu.
 - Testy: pytest (LLM mockowany, suite działa offline). Lint/format: ruff. **Typecheck: brak** (nie skonfigurowano mypy).
 - Hosting: **Railway**, projekt `detektor_ai`, env `production`, service `web`. Wdrożenie przez **natywną integrację GitHub↔Railway** → auto-build (Nixpacks). Entrypoint: `detektor_web.app:app`, port z `$PORT`.
-- **Gałąź integracyjna = `main`** (PR-y celują w `main`, squash-merge). **UWAGA:** Railway nadal auto-deployuje z gałęzi **`claude/ai-slop-detection-tool-ye7nw`** (źródła w panelu Railway jeszcze nie przełączono na `main` — patrz §6/§7). Deploy = fast-forward tej gałęzi do `main` (patrz §9).
+- **Gałąź integracyjna = `main`** (PR-y celują w `main`, squash-merge). **Railway auto-deployuje z `main`** (panel: service `web` → Settings → Source → Branch = `main`, „Auto deploys when pushed to GitHub" = ON, „Wait for CI" = OFF — brak CI w repo). Deploy = po prostu merge PR do `main` (patrz §9).
 - Klucz `GEMINI_API_KEY` ustawiany w panelu Railway (NIE w repo). Bez klucza apka działa w trybie heurystyk.
 
-## 3. Aktualny stan implementacji (zweryfikowane: kod, 32/32 testów, ruff czysto, deploy #12 SUCCESS)
+## 3. Aktualny stan implementacji (zweryfikowane: kod, 32/32 testów, ruff czysto, deploy #14 z `main` SUCCESS)
 - Rdzeń: segmentacja PL, 5 heurystyk, fuzja w 2 wskaźniki, sędzia Gemini (`gemini_judge.py`).
 - Endpointy: `GET /healthz`, `GET /api/models`, `POST /api/analyze` (param `humanize`, `judge`), `POST /api/rewrite`, `POST /api/humanize`.
 - **Tryb heurystyczny na żądanie:** `analyze_text(..., use_llm=False)` / `/api/analyze {"judge": false}` pomija sędziego LLM (szybko, bez kosztu) — używane do live-przeliczania ocen.
@@ -34,7 +34,7 @@ Hybryda: deterministyczne heurystyki + opcjonalny sędzia LLM (Gemini).
 - Diagnostyka błędu LLM: `Report.llm_error` + notatka z „Powód: …". Polskie znaki w heurystykach/UI/YAML OK.
 
 ## 4. Aktywna faza
-Migracja produkcji na gałąź `main` (przełączyć źródło deployu Railway na `main`) + weryfikacja nowego UI na produkcji. Równolegle wciąż otwarte: potwierdzenie sędziego/humanizacji na modelu **Flash** end-to-end.
+Weryfikacja nowego UI + poprawki timeoutu propozycji na produkcji. Równolegle wciąż otwarte: potwierdzenie sędziego/humanizacji na modelu **Flash** end-to-end.
 
 ## 5. Ukończone fazy
 1. Rdzeń heurystyk + fuzja + sędzia LLM (+ tryb bez klucza).
@@ -47,17 +47,17 @@ Migracja produkcji na gałąź `main` (przełączyć źródło deployu Railway n
 8. Układ dwukolumnowy, live przeliczanie ocen (`use_llm`/`judge`), „Kopiuj cały tekst", stały slot podglądu (#10).
 9. Jedno okno tekstu (wsad/spinner/podświetlenia), sterowanie+oceny w prawej kolumnie, fix popovera (#11); fix `.hidden` (loader/legenda zasłaniały pole — #12).
 10. Utworzenie gałęzi `main` + zasada auto-merge (squash) w §0.
+11. **Migracja źródła deployu Railway na `main`** (trigger branch = `main`, auto-deploy ON, Wait for CI OFF). Fix timeoutu propozycji na modelach Pro + etykiety modeli z kompromisem szybkość/dokładność (#14).
 
 ## 6. Następne działania (priorytetowo)
-1. **Przełączyć źródło deployu Railway na `main`** (panel: service `web` → Settings → Source → Branch = `main`) — z kontenera się nie udało (agent rate-limited). Do tego czasu deploy = fast-forward `claude/ai-slop-detection-tool-ye7nw` do `main` (§9).
-2. **Zweryfikować nowy UI na produkcji** (render lokalnie niemożliwy — brak Chromium): jedno okno (wsad→spinner→podświetlenia), prawa kolumna z „Analizuj", live oceny, kopiowanie, popover bez „skakania".
-3. **Potwierdzić LLM na produkcji** modelem Flash (np. `gemini-3-flash-preview` / `gemini-3.5-flash`); sprawdzić logi Railway pod `Gemini:`/`Gemini rewrite`.
-4. Rozważyć zmianę domyślnego `GEMINI_MODEL` (env Railway) z `gemini-3.1-pro-preview` na Flash.
-5. (Opcjonalnie) propozycje w tle, jeśli „z propozycjami" grozi timeoutem; dodać typecheck (mypy/pyright).
+1. **Zweryfikować nowy UI + fix propozycji na produkcji** (render lokalnie niemożliwy — brak Chromium): jedno okno (wsad→spinner→podświetlenia), prawa kolumna z „Analizuj", live oceny, kopiowanie, popover bez „skakania"; propozycje generują się dla Flash (szybko) i Pro (wolniej, bez wiszącego spinnera); dropdown modeli z adnotacją szybkość/dokładność.
+2. **Potwierdzić LLM na produkcji** modelem Flash (np. `gemini-3-flash-preview` / `gemini-3.5-flash`); sprawdzić logi Railway pod `Gemini:`/`Gemini rewrite`.
+3. Rozważyć zmianę domyślnego `GEMINI_MODEL` (env Railway) z `gemini-3.1-pro-preview` na Flash.
+4. (Opcjonalnie) propozycje w tle dla modeli Pro (długa latencja); dodać typecheck (mypy/pyright).
 
 ## 7. Znane problemy / blokery / ryzyka
-- **Railway nadal śledzi `claude/ai-slop-detection-tool-ye7nw`, nie `main`.** Migracja źródła wymaga panelu Railway lub agenta (gdy nie rate-limited).
-- **Railway agent (MCP) bywa rate-limited** („Agent usage limit reached") — w tej sesji nie dało się nim zmienić gałęzi źródłowej. `get-status`/`get-logs`/`list-deployments` działały.
+- **Zmiana gałęzi-triggera Railway tylko z panelu UI.** Railway MCP/agent potrafi zmienić `source.branch`, ale NIE „deployment trigger" (gałąź auto-deployu) — to wymaga panelu (Settings → Source). „Wait for CI" MUSI być OFF (brak CI w repo, inaczej deploy czeka w nieskończoność na nieistniejące checki).
+- **Railway agent (MCP) bywa rate-limited** („Agent usage limit reached"). `get-status`/`get-logs`/`list-deployments` działają niezależnie.
 - **Sieć sandboxa blokuje hosty Railway** (`*.up.railway.app` itp. → „Host not in allowlist"): brak curla produkcji/CLI. Dozwolone: GitHub, npm, Google Fonts, api.anthropic.com. Operacje na Railway → Railway MCP.
 - **Brak Chromium/Playwright w tym środowisku** — zmian frontu NIE da się zweryfikować renderem lokalnie; weryfikacja dopiero po deployu na produkcji.
 - **LLM judge z `gemini-3.1-pro-preview` wcześniej zwracał błąd**; z `gemini-3-flash-preview` brak błędu w logach → ZAŁOŻENIE, że Flash działa (niepotwierdzone end-to-end).
@@ -68,7 +68,7 @@ Migracja produkcji na gałąź `main` (przełączyć źródło deployu Railway n
 ## 8. Ważne decyzje architektoniczne (skrót; pełne w docs/DECISIONS.md)
 - Deploy = **natywna integracja GitHub↔Railway** (nie CLI/MCP), bo sandbox nie ma sieci do Railway.
 - **`main` to gałąź integracyjna**; dev-branch opieraj na `origin/main`, PR → `main`, squash-merge. Po squashu lokalny dev-branch przebazuj na `origin/main` (`git checkout -B <dev> origin/main`, force-with-lease).
-- **Deploy obecnie = fast-forward** gałęzi `claude/ai-slop-detection-tool-ye7nw` do `main` (`git push origin origin/main:refs/heads/claude/ai-slop-detection-tool-ye7nw`) — do czasu przełączenia źródła Railway na `main`.
+- **Deploy = merge PR do `main`** → Railway auto-build z `main` (trigger branch przełączony). Fast-forward starej gałęzi `claude/ai-slop-detection-tool-ye7nw` już NIE jest potrzebny (mechanizm historyczny).
 - **Live oceny** = drugie wywołanie `/api/analyze` z `judge=false` (heurystyki), aktualizuje tylko wskaźniki; lista fragmentów/podświetlenia zarządzane lokalnie po stronie frontu.
 - LLM zawsze opcjonalny; graceful degradation do heurystyk. Model per-żądanie (domyślny z env `GEMINI_MODEL`). Heurystyki sterowane YAML.
 
@@ -85,10 +85,9 @@ PYTHONPATH=src .venv/bin/uvicorn detektor_web.app:app --reload   # http://127.0.
 # JS: brak builda; sanity: node --check src/detektor_web/static/app.js
 # Typecheck: brak (nie skonfigurowano). Baza/migracje: brak (apka bezstanowa).
 
-# Deploy na produkcję (do czasu przełączenia źródła Railway na main):
-git fetch origin main
-git push origin origin/main:refs/heads/claude/ai-slop-detection-tool-ye7nw   # fast-forward -> auto-build
-# status/logi: Railway MCP get-status / get-logs (project dc230d9e..., env 533baa05..., service 24b213f8...)
+# Deploy na produkcję: scal PR do main (squash) -> Railway auto-build z main.
+# status/logi: Railway MCP get-status / get-logs / list-deployments
+#   (project dc230d9e..., env 533baa05..., service 24b213f8...)
 ```
 
 ## 10. Ważne pliki i katalogi
@@ -114,7 +113,7 @@ git push origin origin/main:refs/heads/claude/ai-slop-detection-tool-ye7nw   # f
 - [ ] Serwer wstaje; `GET /healthz` zwraca `{"status":"ok","llm_available":...,"model":...}`.
 - [ ] `POST /api/analyze` zwraca `slop`, `ai_provenance`, `findings`; `{"judge": false}` → bez `llm_error`.
 - [ ] Render frontu: **lokalnie niemożliwy (brak Chromium)** — zweryfikuj na produkcji po deployu.
-- [ ] Deploy: fast-forward `claude/ai-slop-detection-tool-ye7nw` → `main`; po deployu sprawdź logi przez Railway MCP.
+- [ ] Deploy: scal PR do `main` (squash) → Railway auto-build z `main`; po deployu sprawdź `list-deployments` (branch `main`, SUCCESS) i logi przez Railway MCP.
 
 ## 13. Najnowsza nota handoff
-`main` = `7372d19` (#12); produkcja na tym commicie (deploy #12 SUCCESS). W tej sesji: układ dwukolumnowy + live oceny + kopiowanie (#10), jedno okno tekstu ze spinnerem + sterowanie/oceny w prawej kolumnie + fix popovera (#11), fix `.hidden` (loader zasłaniał pole — #12), utworzenie gałęzi `main` i zasada auto-merge. **Najpilniejsze:** przełączyć źródło deployu Railway na `main` (panel) i zweryfikować nowy UI na produkcji. Pełny handoff: `docs/HANDOFF.md`.
+`main` = `5d9b844` (#14); produkcja na tym commicie (deploy `6c298a8a` SUCCESS, **branch `main`**). W tej sesji: **migracja źródła deployu Railway na `main`** (trigger branch = `main`, auto-deploy ON, Wait for CI OFF — potwierdzone deployem z `main`), fix timeoutu propozycji na modelach Pro (`rewrite_timeout_s` 12→30 s) + etykiety modeli w `/api/models` z adnotacją szybkość/dokładność (#14). **Najpilniejsze:** zweryfikować na produkcji generowanie propozycji (Flash szybko, Pro wolniej) i nowe etykiety modeli. Pełny handoff: `docs/HANDOFF.md`.
