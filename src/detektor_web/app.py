@@ -60,11 +60,32 @@ def index(request: Request) -> HTMLResponse:
     return _templates.TemplateResponse(request, "index.html")
 
 
+def _speed_hint(model_id: str) -> str:
+    """Krotka adnotacja kompromisu szybkosc/dokladnosc po id modelu."""
+    mid = model_id.lower()
+    if "lite" in mid:
+        return "najszybsza analiza, najmniej dokładna"
+    if "flash" in mid:
+        return "szybsza analiza, mniej dokładna"
+    if "pro" in mid:
+        return "wolniejsza analiza, dokładniejsza"
+    return ""
+
+
+def _annotate(items: list[dict[str, str]]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for m in items:
+        hint = _speed_hint(m["id"])
+        label = f"{m['label']} — {hint}" if hint else m["label"]
+        out.append({"id": m["id"], "label": label})
+    return out
+
+
 @app.get("/api/models")
 def models() -> dict:
     settings = get_settings()
     items, source = list_available_models(settings)
-    return {"models": items, "default": settings.gemini_model, "source": source}
+    return {"models": _annotate(items), "default": settings.gemini_model, "source": source}
 
 
 @app.post("/api/analyze", response_model=Report)
