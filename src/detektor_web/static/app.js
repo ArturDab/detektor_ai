@@ -146,6 +146,7 @@ function renderFindings(findings) {
           .join("");
         action = `<div class="props">${opts}</div>
           <div class="prop-preview" data-idx="${i}">${PREVIEW_HINT}</div>
+          <button class="regen-btn" data-idx="${i}">↻ Nowy zestaw propozycji</button>
           <div class="prop-custom-inline">
             <input type="text" data-idx="${i}" placeholder="Wpisz własną wersję..." />
             <button class="prop-custom-apply" data-idx="${i}">Zastosuj</button>
@@ -313,6 +314,61 @@ function renderPopProposals(props) {
   $("pop-list").innerHTML = props
     .map((p, j) => `<button class="pop-opt" data-prop="${j}">${escapeHtml(p)}</button>`)
     .join("");
+}
+
+// Pobiera nowy zestaw propozycji z LLM dla danego fragmentu.
+async function fetchProposals(f) {
+  const quote = CURRENT.text.slice(f.start, f.end);
+  const ctxStart = Math.max(0, f.start - 80);
+  const ctxEnd = Math.min(CURRENT.text.length, f.end + 80);
+  const resp = await fetch("/api/rewrite", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      quote,
+      context: CURRENT.text.slice(ctxStart, ctxEnd),
+      reason: f.message || "",
+      model: selectedModel(),
+    }),
+  });
+  return resp.json();
+}
+
+// Generuje nowy zestaw propozycji dla fragmentu (przycisk „Nowy zestaw…").
+// Aktualizuje liste i — jesli otwarty dla tego fragmentu — popover.
+async function regenerateProposals(idx, btn) {
+  const f = CURRENT.findings[idx];
+  if (!f) return;
+  const orig = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Generuję…";
+  }
+  try {
+    const data = await fetchProposals(f);
+    const props = data.proposals || [];
+    if (props.length) {
+      f.proposals = props;
+      renderFindings(CURRENT.findings);
+      const pop = $("popover");
+      if (pop.dataset.idx === String(idx) && !pop.classList.contains("hidden")) {
+        renderPopProposals(props);
+      }
+    } else {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+      const err = data.error ? ` (${data.error})` : "";
+      $("humanize-status").textContent = "Nie udało się wygenerować nowych propozycji." + err;
+    }
+  } catch (e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+    $("humanize-status").textContent = "Błąd generowania propozycji.";
+  }
 }
 
 async function openRewrite(idx, anchor) {
@@ -500,7 +556,10 @@ $("findings").addEventListener("click", (e) => {
     const input = capply.closest(".finding").querySelector("input[data-idx]");
     const val = input ? input.value.trim() : "";
     if (val) applyReplacement(Number(capply.dataset.idx), val);
+    return;
   }
+  const regen = e.target.closest(".regen-btn");
+  if (regen) regenerateProposals(Number(regen.dataset.idx), regen);
 });
 
 $("findings").addEventListener("mouseover", (e) => {
@@ -518,6 +577,10 @@ $("findings").addEventListener("mouseout", (e) => {
 });
 
 $("pop-close").addEventListener("click", closePopover);
+$("pop-regen").addEventListener("click", () => {
+  const idx = Number($("popover").dataset.idx);
+  if (!Number.isNaN(idx)) regenerateProposals(idx, $("pop-regen"));
+});
 $("pop-list").addEventListener("click", (e) => {
   const opt = e.target.closest(".pop-opt");
   if (!opt) return;
