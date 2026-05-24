@@ -9,12 +9,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Modele Gemini wybieralne w UI (id musi byc rozpoznawane przez API klucza).
 # Modele "live"/voice pomijamy - nie nadaja sie do strukturalnego JSON.
 MODEL_CHOICES: list[dict[str, str]] = [
-    {"id": "gemini-3.5-flash", "label": "Gemini 3.5 Flash — najnowszy, szybki"},
+    {"id": "gemini-3.5-flash", "label": "Gemini 3.5 Flash"},
     {"id": "gemini-3-flash-preview", "label": "Gemini 3 Flash (preview)"},
-    {"id": "gemini-3.1-flash-lite", "label": "Gemini 3.1 Flash-Lite — najszybszy, tani"},
+    {"id": "gemini-3.1-flash-lite", "label": "Gemini 3.1 Flash-Lite"},
     {"id": "gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro (preview)"},
-    {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro — reasoning"},
-    {"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash — zbalansowany"},
+    {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro"},
+    {"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash"},
 ]
 
 MODEL_IDS: frozenset[str] = frozenset(m["id"] for m in MODEL_CHOICES)
@@ -29,8 +29,9 @@ class Settings(BaseSettings):
     enable_llm: bool = True
     llm_timeout_s: float = 20.0
     llm_max_retries: int = 1
-    # Humanizacja: krotszy timeout i rownoleglosc, by request nie ciagnal sie minutami.
-    rewrite_timeout_s: float = 12.0
+    # Humanizacja: timeout na pojedynczy rewrite. Modele Pro maja wysoka latencje,
+    # wiec musi byc na tyle duzy, by zdazyly zwrocic propozycje (kosztem dluzszego czekania).
+    rewrite_timeout_s: float = 30.0
     rewrite_concurrency: int = 8
 
     # --- Segmentacja ---
