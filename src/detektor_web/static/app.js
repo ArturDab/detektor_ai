@@ -318,7 +318,9 @@ function renderPopProposals(props) {
 
 // Pobiera nowy zestaw propozycji z LLM dla danego fragmentu.
 async function fetchProposals(f) {
-  const quote = CURRENT.text.slice(f.start, f.end);
+  const nextCh = CURRENT.text[f.end] || '';
+  if (/^[.!?…]$/.test(nextCh)) f.end += 1;
+  let quote = CURRENT.text.slice(f.start, f.end);
   const ctxStart = Math.max(0, f.start - 80);
   const ctxEnd = Math.min(CURRENT.text.length, f.end + 80);
   const resp = await fetch("/api/rewrite", {
@@ -374,6 +376,8 @@ async function regenerateProposals(idx, btn) {
 async function openRewrite(idx, anchor) {
   const f = CURRENT.findings[idx];
   if (!f) return;
+  const nextCh = CURRENT.text[f.end] || '';
+  if (/^[.!?…]$/.test(nextCh)) f.end += 1;
   const quote = CURRENT.text.slice(f.start, f.end);
   const pop = $("popover");
   pop.dataset.idx = String(idx);
