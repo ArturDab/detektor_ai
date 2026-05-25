@@ -223,20 +223,43 @@ function renderReport(r) {
 
 // ---------- Humanizacja: popover + zastosowanie ----------
 
+let _popAnchor = null;
+
 function closePopover() {
   $("popover").classList.add("hidden");
   $("popover").dataset.idx = "";
+  _popAnchor = null;
 }
 
+// Pozycjonuje popover (position: fixed) tak, by NIGDY nie wyszedl poza viewport.
+// Bez argumentu przelicza pozycje dla zapamietanej kotwicy (po zmianie wysokosci tresci).
 function positionPopover(anchor) {
   const pop = $("popover");
   pop.classList.remove("hidden");
-  const rect = anchor.getBoundingClientRect();
-  const top = window.scrollY + rect.bottom + 6;
-  let left = window.scrollX + rect.left;
-  left = Math.min(left, window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 12);
+  if (anchor) _popAnchor = anchor;
+  if (!_popAnchor) return;
+
+  const margin = 8;
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  const rect = _popAnchor.getBoundingClientRect();
+  const pw = pop.offsetWidth;
+  const ph = pop.offsetHeight;
+
+  // Poziomo: wyrownaj do lewej krawedzi kotwicy, ale trzymaj w viewport.
+  let left = Math.min(rect.left, vw - pw - margin);
+  left = Math.max(margin, left);
+
+  // Pionowo: domyslnie pod kotwica; jesli sie nie miesci -> nad nia; na koniec przytnij.
+  let top = rect.bottom + 6;
+  if (top + ph > vh - margin) {
+    const above = rect.top - ph - 6;
+    top = above >= margin ? above : Math.max(margin, vh - ph - margin);
+  }
+  top = Math.max(margin, top);
+
+  pop.style.left = `${left}px`;
   pop.style.top = `${top}px`;
-  pop.style.left = `${Math.max(8, left)}px`;
 }
 
 function applyReplacement(idx, replacement) {
@@ -314,6 +337,7 @@ function renderPopProposals(props) {
   $("pop-list").innerHTML = props
     .map((p, j) => `<button class="pop-opt" data-prop="${j}">${escapeHtml(p)}</button>`)
     .join("");
+  positionPopover();
 }
 
 // Pobiera nowy zestaw propozycji z LLM dla danego fragmentu.
@@ -423,9 +447,11 @@ async function openRewrite(idx, anchor) {
       const err = data.error ? ` (${escapeHtml(data.error)})` : "";
       $("pop-list").innerHTML = `<div class='pop-empty'>${hint}${err}</div>`;
     }
+    positionPopover();
   } catch (e) {
     if (pop.dataset.idx === String(idx)) {
       $("pop-list").innerHTML = "<div class='pop-empty'>Błąd pobierania propozycji.</div>";
+      positionPopover();
     }
   }
 }
@@ -617,6 +643,10 @@ document.addEventListener("click", (e) => {
   if (pop.contains(e.target)) return;
   if (e.target.closest("mark[data-idx]") || e.target.closest(".show-props")) return;
   closePopover();
+});
+
+window.addEventListener("resize", () => {
+  if (!$("popover").classList.contains("hidden")) positionPopover();
 });
 
 loadModels();

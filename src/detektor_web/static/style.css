@@ -369,7 +369,8 @@ mark:hover { filter: brightness(0.94); }
 
 /* ---------- Popover (propozycje przepisania) ---------- */
 .popover {
-  position: absolute; z-index: 50; width: min(380px, 92vw);
+  position: fixed; z-index: 50; width: min(380px, 92vw);
+  max-height: calc(100vh - 16px); overflow-y: auto;
   background: var(--card); border: 1px solid var(--border-strong); border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16); padding: 14px;
 }
