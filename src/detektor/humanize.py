@@ -12,6 +12,7 @@ from .text import segment
 
 _CTX = 80  # ile znakow kontekstu z kazdej strony fragmentu
 _MAX_FRAGMENTS = 8  # limit wywolan LLM na jedna humanizacje
+_TERMINAL_CHARS = frozenset(".!?…")
 
 
 def _rewrite_many(
@@ -31,6 +32,12 @@ def _rewrite_many(
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         return dict(ex.map(_one, jobs))
+
+
+def _extend_terminal(text: str, f: Finding) -> None:
+    """Rozszerza f.end o jeden znak interpunkcji konczacej zdanie (jesli nastepuje bezposrednio)."""
+    if f.end < len(text) and text[f.end] in _TERMINAL_CHARS:
+        f.end += 1
 
 
 def _pick_fragments(findings: list[Finding]) -> list[Finding]:
@@ -69,6 +76,8 @@ def attach_proposals(
         return text[max(0, start - _CTX) : min(len(text), end + _CTX)]
 
     chosen = _pick_fragments(report.findings)
+    for f in chosen:
+        _extend_terminal(text, f)
     jobs: list[tuple[Finding, str, str]] = []
     for f in chosen:
         ctx = sentence_for(f.start, f.end)
@@ -95,6 +104,9 @@ def humanize_text(
     chosen = _pick_fragments(report.findings)
     if not chosen:
         return text, [], None
+
+    for f in chosen:
+        _extend_terminal(text, f)
 
     jobs: list[tuple[Finding, str, str]] = [
         (f, text[f.start : f.end], text[max(0, f.start - _CTX) : min(len(text), f.end + _CTX)])
