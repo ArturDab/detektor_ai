@@ -8,12 +8,29 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import logging
+import re
 
 from ..config import Settings, get_settings
 from .prompts import REWRITE_SYSTEM, build_rewrite_prompt
 from .schema import RewriteProposals
 
 log = logging.getLogger(__name__)
+
+# Koncowa interpunkcja zdania (do dopasowania propozycji do cytatu).
+_TERMINAL_RE = re.compile(r"[.!?…]+$")
+
+
+def _match_terminal(proposal: str, quote: str) -> str:
+    """Dopasowuje koncowa interpunkcje propozycji do cytatu.
+
+    Jesli cytat konczy sie kropka/!/?/…, propozycja dostaje te sama koncowke;
+    jesli cytat nie ma koncowej interpunkcji (fragment srodka zdania), usuwa ja
+    z propozycji, by nie wstawic kropki w srodku zdania.
+    """
+    qm = _TERMINAL_RE.search(quote.rstrip())
+    qterm = qm.group(0) if qm else ""
+    core = _TERMINAL_RE.sub("", proposal.rstrip()).rstrip()
+    return (core + qterm) if core else proposal
 
 
 class GeminiRewriter:
@@ -32,18 +49,29 @@ class GeminiRewriter:
         return True
 
     def rewrite(self, quote: str, context: str = "", reason: str = "", n: int = 3) -> list[str]:
+        """Zwraca propozycje przepisania. Przy pustym wyniku ponawia raz (luki)."""
         self.last_error = None
         if not self.available() or not quote.strip():
             return []
+        out: list[str] = []
+        for _ in range(2):
+            out = self._rewrite_once(quote, context, reason, n)
+            if out:
+                return out
+        return out
+
+    def _rewrite_once(self, quote: str, context: str, reason: str, n: int) -> list[str]:
         try:
             raw = self._generate(quote, context, reason, n)
-            parsed = raw if isinstance(raw, RewriteProposals) else RewriteProposals.model_validate(
-                json.loads(raw)
+            parsed = (
+                raw
+                if isinstance(raw, RewriteProposals)
+                else RewriteProposals.model_validate(json.loads(raw))
             )
             seen: set[str] = set()
             out: list[str] = []
             for p in parsed.proposals:
-                p = p.strip()
+                p = _match_terminal(p.strip(), quote)
                 if p and p not in seen:
                     seen.add(p)
                     out.append(p)

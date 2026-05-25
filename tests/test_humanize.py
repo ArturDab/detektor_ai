@@ -37,3 +37,31 @@ def test_rewriter_parses_json(monkeypatch):
 def test_rewriter_unavailable_returns_empty():
     r = GeminiRewriter(Settings(gemini_api_key=None, enable_llm=True))
     assert r.rewrite("cokolwiek") == []
+
+
+def test_rewriter_matches_terminal_punctuation(monkeypatch):
+    monkeypatch.setattr(GeminiRewriter, "available", lambda self: True)
+    monkeypatch.setattr(
+        GeminiRewriter,
+        "_generate",
+        lambda self, q, c, r, n: '{"proposals": ["Nowa wersja", "Inna wersja."]}',
+    )
+    r = GeminiRewriter(Settings(gemini_api_key="abc", enable_llm=True))
+    # Cytat z kropka -> obie propozycje musza miec kropke.
+    assert r.rewrite("Czas odłożyć snobizm na bok.", n=3) == ["Nowa wersja.", "Inna wersja."]
+    # Cytat bez koncowej interpunkcji (srodek zdania) -> kropka usunieta.
+    assert r.rewrite("warto zauważyć", n=3) == ["Nowa wersja", "Inna wersja"]
+
+
+def test_rewriter_retries_once_when_empty(monkeypatch):
+    monkeypatch.setattr(GeminiRewriter, "available", lambda self: True)
+    calls = {"n": 0}
+
+    def _gen(self, q, c, r, n):
+        calls["n"] += 1
+        return '{"proposals": []}' if calls["n"] == 1 else '{"proposals": ["OK."]}'
+
+    monkeypatch.setattr(GeminiRewriter, "_generate", _gen)
+    r = GeminiRewriter(Settings(gemini_api_key="abc", enable_llm=True))
+    assert r.rewrite("Zdanie.", n=3) == ["OK."]
+    assert calls["n"] == 2
