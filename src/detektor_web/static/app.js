@@ -11,8 +11,9 @@ const DIM_LABEL = {
   unnatural_rhythm: "Nienaturalny rytm",
 };
 
-// Stan ostatniej analizy (mutowalny przy humanizacji fragmentow).
 const CURRENT = { text: "", findings: [] };
+let ACTIVE_IDX = -1;
+let DONE_COUNT = 0;
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) =>
@@ -60,6 +61,20 @@ function gauge(score) {
   </svg>`;
 }
 
+function gaugeSmall(score) {
+  const r = 24;
+  const c = 2 * Math.PI * r;
+  const off = c * (1 - score / 100);
+  const color = colorFor(score).trim();
+  return `<svg viewBox="0 0 64 64" class="gauge gauge-sm">
+    <circle cx="32" cy="32" r="${r}" class="g-bg"></circle>
+    <circle cx="32" cy="32" r="${r}" class="g-fg"
+      style="stroke:${color};stroke-dasharray:${c.toFixed(1)};stroke-dashoffset:${off.toFixed(1)}"></circle>
+    <text x="32" y="30" class="g-num" style="font-size:15px">${score.toFixed(0)}</text>
+    <text x="32" y="41" class="g-cap" style="font-size:9px">/100</text>
+  </svg>`;
+}
+
 function renderVerdict(r) {
   const slop = r.slop.score;
   const ai = r.ai_provenance.score;
@@ -76,7 +91,7 @@ function renderVerdict(r) {
     `Jakość/slop: <strong>${slop.toFixed(0)}/100</strong> ` +
     `(${bandSlop(slop)}) &nbsp;·&nbsp; ` +
     `Sygnał AI: <strong>${ai.toFixed(0)}/100</strong> (${bandAi(ai)})`;
-  $("verdict").dataset.tone = slopHigh || aiHigh ? "warn" : "ok";
+  $("abar-verdict").dataset.tone = slopHigh || aiHigh ? "warn" : "ok";
 }
 
 function breakdownHtml(items) {
@@ -85,7 +100,101 @@ function breakdownHtml(items) {
     .join(" &nbsp;|&nbsp; ");
 }
 
-// Zwraca HTML z podswietleniami; kazdy <mark> ma data-idx -> indeks w findings.
+// Parses raw text into structured blocks: headings, bullet lists, paragraphs.
+// Returns array of { type: 'h1'|'h2'|'ul'|'p', content, items? }
+function parseBlocks(text) {
+  const lines = text.split("\n");
+  const blocks = [];
+  let para = [];
+
+  function flushPara() {
+    const t = para.join("\n").trim();
+    if (t) blocks.push({ type: "p", content: t });
+    para = [];
+  }
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Markdown-style headings
+    if (/^#{1,2}\s/.test(trimmed)) {
+      flushPara();
+      const level = trimmed.startsWith("## ") ? "h2" : "h1";
+      blocks.push({ type: level, content: trimmed.replace(/^#+\s/, "") });
+      i++;
+      continue;
+    }
+
+    // Blank line → paragraph boundary
+    if (!trimmed) {
+      flushPara();
+      i++;
+      continue;
+    }
+
+    // Bullet list item
+    if (/^[-*•]\s/.test(trimmed)) {
+      flushPara();
+      const items = [];
+      while (i < lines.length && /^[-*•]\s/.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^[-*•]\s/, ""));
+        i++;
+      }
+      blocks.push({ type: "ul", items });
+      continue;
+    }
+
+    // Numbered list item
+    if (/^\d+[.)]\s/.test(trimmed)) {
+      flushPara();
+      const items = [];
+      while (i < lines.length && /^\d+[.)]\s/.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^\d+[.)]\s/, ""));
+        i++;
+      }
+      blocks.push({ type: "ol", items });
+      continue;
+    }
+
+    // Heuristic: short line without ending punctuation = heading
+    if (
+      trimmed.length > 0 &&
+      trimmed.length <= 80 &&
+      !/[.!?,;:]$/.test(trimmed) &&
+      !lines[i + 1]?.trim()  // followed by blank line
+    ) {
+      flushPara();
+      blocks.push({ type: "h2", content: trimmed });
+      i++;
+      continue;
+    }
+
+    para.push(line);
+    i++;
+  }
+  flushPara();
+  return blocks;
+}
+
+// Renders a single text block as HTML. Marks (already HTML) are embedded as-is.
+function blockToHtml(block) {
+  switch (block.type) {
+    case "h1":
+      return `<h2 class="hl-h1">${block.content}</h2>`;
+    case "h2":
+      return `<h3 class="hl-h2">${block.content}</h3>`;
+    case "ul":
+      return `<ul class="hl-ul">${block.items.map((it) => `<li>${it}</li>`).join("")}</ul>`;
+    case "ol":
+      return `<ol class="hl-ol">${block.items.map((it) => `<li>${it}</li>`).join("")}</ol>`;
+    default:
+      return `<p class="hl-p">${block.content.replace(/\n/g, "<br>")}</p>`;
+  }
+}
+
+// Builds highlighted HTML: inserts <mark> tags then formats into pretty blocks.
 function renderHighlighted(text, findings) {
   const indexed = findings
     .map((f, i) => ({ f, i }))
@@ -99,34 +208,81 @@ function renderHighlighted(text, findings) {
       lastEnd = x.f.end;
     }
   }
-  let out = "";
+
+  // Build flat string with <mark> tags (HTML-safe outside marks).
+  let flat = "";
   let cur = 0;
   for (const { f, i } of chosen) {
-    out += escapeHtml(text.slice(cur, f.start));
+    flat += escapeHtml(text.slice(cur, f.start));
     const seg = escapeHtml(text.slice(f.start, f.end));
     const tip = escapeHtml(f.message + (f.suggestion ? "  →  " + f.suggestion : ""));
-    out += `<mark class="sev-${f.severity}" data-idx="${i}" title="${tip}">${seg}</mark>`;
+    flat += `<mark class="sev-${f.severity}" data-idx="${i}" title="${tip}">${seg}</mark>`;
     cur = f.end;
   }
-  out += escapeHtml(text.slice(cur));
-  return formatParagraphs(out);
+  flat += escapeHtml(text.slice(cur));
+
+  // Split flat HTML on newlines while preserving <mark> tags intact.
+  // Strategy: split raw text into blocks first (preserving char positions),
+  // then re-insert marks per block.
+  return formatRichHtml(flat);
 }
 
-// Dzieli zaznaczony HTML na akapity (po pustych liniach), wykrywa krotkie linie
-// bez konczacej interpunkcji jako naglowki. Marki (<mark>) zostaja nietkniete.
-function formatParagraphs(html) {
-  const blocks = html.split(/\n[ \t]*\n+/);
+// Takes HTML string (with <mark> tags) and formats it into rich block HTML.
+function formatRichHtml(html) {
+  // Split on blank lines (two or more newlines), keeping marks intact.
+  const rawBlocks = html.split(/\n[ \t]*\n+/);
   const parts = [];
-  for (const block of blocks) {
+
+  for (const block of rawBlocks) {
     if (!block.trim()) continue;
     const plain = block.replace(/<[^>]+>/g, "").trim();
-    const oneLine = !block.includes("\n");
-    const isHeading =
-      oneLine && plain.length > 0 && plain.length <= 70 && !/[.!?,;:]$/.test(plain);
+    const lines = block.split("\n");
+    const firstLine = lines[0].replace(/<[^>]+>/g, "").trim();
+
+    // Bullet list
+    if (/^[-*•]\s/.test(firstLine)) {
+      const liItems = lines
+        .filter((l) => l.replace(/<[^>]+>/g, "").trim())
+        .map((l) => `<li>${l.replace(/^[-*•]\s/, "")}</li>`);
+      parts.push(`<ul class="hl-ul">${liItems.join("")}</ul>`);
+      continue;
+    }
+
+    // Numbered list
+    if (/^\d+[.)]\s/.test(firstLine)) {
+      const liItems = lines
+        .filter((l) => l.replace(/<[^>]+>/g, "").trim())
+        .map((l) => `<li>${l.replace(/^\d+[.)]\s/, "")}</li>`);
+      parts.push(`<ol class="hl-ol">${liItems.join("")}</ol>`);
+      continue;
+    }
+
+    // Markdown heading
+    if (/^#{1,2}\s/.test(firstLine)) {
+      const level = firstLine.startsWith("## ") ? "hl-h2" : "hl-h1";
+      const inner = block.replace(/^#+\s/, "");
+      parts.push(`<h3 class="${level}">${inner}</h3>`);
+      continue;
+    }
+
+    // Heuristic heading: single short line, no trailing punctuation
+    const isSingleLine = lines.filter((l) => l.replace(/<[^>]+>/g, "").trim()).length === 1;
+    if (isSingleLine && plain.length > 0 && plain.length <= 80 && !/[.!?,;:]$/.test(plain)) {
+      parts.push(`<h3 class="hl-h2">${block.trim()}</h3>`);
+      continue;
+    }
+
+    // Regular paragraph
     const inner = block.replace(/\n/g, "<br>");
-    parts.push(`<p class="hl-p${isHeading ? " hl-heading" : ""}">${inner}</p>`);
+    parts.push(`<p class="hl-p">${inner}</p>`);
   }
+
   return parts.join("") || `<p class="hl-p">${html.replace(/\n/g, "<br>")}</p>`;
+}
+
+// Legacy: still called from renderScores path (no findings, just formatting).
+function formatParagraphs(html) {
+  return formatRichHtml(html);
 }
 
 function renderDimensions(dimensions) {
@@ -146,10 +302,12 @@ function renderDimensions(dimensions) {
     .join("");
 }
 
+const PREVIEW_HINT = `<span class="prop-preview-hint">Najedź na propozycję, aby zobaczyć ją w zdaniu.</span>`;
+
 function renderFindings(findings) {
   $("findings-count").textContent = `(${findings.length})`;
   if (!findings.length) {
-    $("findings").innerHTML = "<li class='finding'>Brak wykrytych sygnałów.</li>";
+    $("findings").innerHTML = "<li class='finding finding-empty'>Brak wykrytych sygnałów — świetna robota!</li>";
     return;
   }
   $("findings").innerHTML = findings
@@ -168,10 +326,12 @@ function renderFindings(findings) {
             <input type="text" data-idx="${i}" placeholder="Wpisz własną wersję..." />
             <button class="prop-custom-apply" data-idx="${i}">Zastosuj</button>
           </div>`;
+      } else if (f._loading) {
+        action = `<div class="props-loading"><span class="spinner-sm"></span> Generuję propozycje…</div>`;
       } else {
-        action = `<button class="show-props" data-idx="${i}">Propozycje zmiany</button>`;
+        action = `<button class="load-props" data-idx="${i}">Załaduj propozycje</button>`;
       }
-      return `<li class="finding sev-${f.severity}">
+      return `<li class="finding sev-${f.severity}" data-idx="${i}">
         <div class="finding-head">
           <span class="chip sev-${f.severity}">${SEV_LABEL[f.severity] || f.severity}</span>
           <span class="finding-analyzer">${escapeHtml(f.analyzer)}</span>
@@ -183,6 +343,13 @@ function renderFindings(findings) {
       </li>`;
     })
     .join("");
+  applyActiveClass();
+}
+
+function applyActiveClass() {
+  document.querySelectorAll("#findings li.finding").forEach((li) => {
+    li.classList.toggle("active", Number(li.dataset.idx) === ACTIVE_IDX);
+  });
 }
 
 function renderNotes(notes) {
@@ -202,8 +369,6 @@ function renderLlmError(err) {
   }
 }
 
-// Aktualizuje wylacznie wskazniki (gauge/werdykt/breakdown) — uzywane tez przy
-// przeliczaniu na biezaco, bez ruszania listy fragmentow/podswietlen.
 function renderScores(r) {
   renderVerdict(r);
 
@@ -216,11 +381,16 @@ function renderScores(r) {
   $("band-ai").textContent = bandAi(r.ai_provenance.score);
   $("conf-ai").textContent = `pewność: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
   $("break-ai").innerHTML = breakdownHtml(r.ai_provenance.breakdown);
+
+  $("bar-gauge-slop").innerHTML = gaugeSmall(r.slop.score);
+  $("bar-gauge-ai").innerHTML = gaugeSmall(r.ai_provenance.score);
 }
 
 function renderReport(r) {
   CURRENT.text = r.text;
   CURRENT.findings = (r.findings || []).map((f) => ({ ...f }));
+  ACTIVE_IDX = CURRENT.findings.length > 0 ? 0 : -1;
+  DONE_COUNT = 0;
 
   renderScores(r);
   renderLlmError(r.llm_error);
@@ -238,49 +408,83 @@ function renderReport(r) {
   $("highlighted").innerHTML = renderHighlighted(CURRENT.text, CURRENT.findings);
   renderFindings(CURRENT.findings);
 
-  $("results").classList.remove("hidden");
-}
+  $("abar-results").classList.remove("hidden");
+  updateNav();
 
-// ---------- Humanizacja: popover + zastosowanie ----------
-
-let _popAnchor = null;
-
-function closePopover() {
-  $("popover").classList.add("hidden");
-  $("popover").dataset.idx = "";
-  _popAnchor = null;
-}
-
-// Pozycjonuje popover (position: fixed) tak, by NIGDY nie wyszedl poza viewport.
-// Bez argumentu przelicza pozycje dla zapamietanej kotwicy (po zmianie wysokosci tresci).
-function positionPopover(anchor) {
-  const pop = $("popover");
-  pop.classList.remove("hidden");
-  if (anchor) _popAnchor = anchor;
-  if (!_popAnchor) return;
-
-  const margin = 8;
-  const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
-  const rect = _popAnchor.getBoundingClientRect();
-  const pw = pop.offsetWidth;
-  const ph = pop.offsetHeight;
-
-  // Poziomo: wyrownaj do lewej krawedzi kotwicy, ale trzymaj w viewport.
-  let left = Math.min(rect.left, vw - pw - margin);
-  left = Math.max(margin, left);
-
-  // Pionowo: domyslnie pod kotwica; jesli sie nie miesci -> nad nia; na koniec przytnij.
-  let top = rect.bottom + 6;
-  if (top + ph > vh - margin) {
-    const above = rect.top - ph - 6;
-    top = above >= margin ? above : Math.max(margin, vh - ph - margin);
+  if (CURRENT.findings.length > 0 && !CURRENT.findings[0].proposals) {
+    loadProposalsForFinding(0);
   }
-  top = Math.max(margin, top);
-
-  pop.style.left = `${left}px`;
-  pop.style.top = `${top}px`;
 }
+
+// ---------- Navigation ----------
+
+function navigateTo(idx) {
+  if (CURRENT.findings.length === 0) return;
+  idx = Math.max(0, Math.min(CURRENT.findings.length - 1, idx));
+  ACTIVE_IDX = idx;
+  applyActiveClass();
+  scrollToFinding(idx);
+  scrollToMark(idx);
+  updateNav();
+  const f = CURRENT.findings[idx];
+  if (f && !f.proposals && !f._loading) loadProposalsForFinding(idx);
+}
+
+function scrollToFinding(idx) {
+  const li = document.querySelector(`#findings li.finding[data-idx="${idx}"]`);
+  if (!li) return;
+  const col = document.querySelector(".col-right");
+  if (col) {
+    const navH = $("finding-nav").offsetHeight || 0;
+    const top = li.offsetTop - navH - 8;
+    col.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  } else {
+    li.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function scrollToMark(idx) {
+  const mark = document.querySelector(`mark[data-idx="${idx}"]`);
+  if (mark) mark.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function updateNav() {
+  const total = CURRENT.findings.length;
+  if (!total) {
+    $("finding-nav").classList.add("hidden");
+    return;
+  }
+  $("finding-nav").classList.remove("hidden");
+  $("nav-pos").textContent = `${ACTIVE_IDX + 1} / ${total}`;
+  $("nav-prev").disabled = ACTIVE_IDX <= 0;
+  $("nav-next").disabled = ACTIVE_IDX >= total - 1;
+  const f = CURRENT.findings[ACTIVE_IDX];
+  $("nav-apply").disabled = !f || !f.proposals || !f.proposals.length;
+  $("nav-done").textContent = DONE_COUNT > 0 ? `${DONE_COUNT} zastosowano` : "";
+}
+
+async function loadProposalsForFinding(idx) {
+  const f = CURRENT.findings[idx];
+  if (!f || f._loading || (f.proposals && f.proposals.length)) return;
+  f._loading = true;
+  renderFindings(CURRENT.findings);
+  updateNav();
+  try {
+    const data = await fetchProposals(f);
+    if (CURRENT.findings[idx] !== f) return;
+    f.proposals = data.proposals || [];
+    f._loading = false;
+    renderFindings(CURRENT.findings);
+    updateNav();
+  } catch (e) {
+    if (CURRENT.findings[idx] === f) {
+      f._loading = false;
+      renderFindings(CURRENT.findings);
+    }
+  }
+}
+
+// ---------- Humanization: apply + fetch ----------
 
 function applyReplacement(idx, replacement) {
   const f = CURRENT.findings[idx];
@@ -298,13 +502,14 @@ function applyReplacement(idx, replacement) {
   }
   $("text").value = CURRENT.text;
   $("highlighted").innerHTML = renderHighlighted(CURRENT.text, CURRENT.findings);
+  DONE_COUNT++;
+  ACTIVE_IDX = CURRENT.findings.length === 0 ? -1 : Math.min(idx, CURRENT.findings.length - 1);
   renderFindings(CURRENT.findings);
-  closePopover();
+  updateNav();
   refreshScores();
+  if (ACTIVE_IDX >= 0) setTimeout(() => scrollToFinding(ACTIVE_IDX), 80);
 }
 
-// Przelicza oceny na biezaco (tryb heurystyczny, bez LLM) po edycji fragmentu.
-// Aktualizuje tylko wskazniki — lista propozycji i podswietlenia pozostaja lokalne.
 let _scoreSeq = 0;
 async function refreshScores() {
   const seq = ++_scoreSeq;
@@ -326,45 +531,10 @@ async function refreshScores() {
   }
 }
 
-async function copyAll() {
-  const text = $("text").value;
-  if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
-    $("humanize-status").textContent = "Skopiowano cały tekst do schowka.";
-  } catch (e) {
-    $("text").select();
-    $("humanize-status").textContent = "Zaznaczono tekst — skopiuj ręcznie (Ctrl/Cmd+C).";
-  }
-}
-
-const PREVIEW_HINT = `<span class="prop-preview-hint">Najedź na propozycję, aby zobaczyć ją w zdaniu.</span>`;
-
-function previewHTML(f, proposal) {
-  const quote = CURRENT.text.slice(f.start, f.end);
-  const ctx =
-    f.context ||
-    CURRENT.text.slice(Math.max(0, f.start - 100), Math.min(CURRENT.text.length, f.end + 100));
-  const marked = `<mark class="preview-new">${escapeHtml(proposal)}</mark>`;
-  const i = ctx.indexOf(quote);
-  if (i < 0) return marked;
-  return escapeHtml(ctx.slice(0, i)) + marked + escapeHtml(ctx.slice(i + quote.length));
-}
-
-function renderPopProposals(props) {
-  const pop = $("popover");
-  pop._props = props;
-  $("pop-list").innerHTML = props
-    .map((p, j) => `<button class="pop-opt" data-prop="${j}">${escapeHtml(p)}</button>`)
-    .join("");
-  positionPopover();
-}
-
-// Pobiera nowy zestaw propozycji z LLM dla danego fragmentu.
 async function fetchProposals(f) {
-  const nextCh = CURRENT.text[f.end] || '';
+  const nextCh = CURRENT.text[f.end] || "";
   if (/^[.!?…]$/.test(nextCh)) f.end += 1;
-  let quote = CURRENT.text.slice(f.start, f.end);
+  const quote = CURRENT.text.slice(f.start, f.end);
   const ctxStart = Math.max(0, f.start - 80);
   const ctxEnd = Math.min(CURRENT.text.length, f.end + 80);
   const resp = await fetch("/api/rewrite", {
@@ -380,99 +550,90 @@ async function fetchProposals(f) {
   return resp.json();
 }
 
-// Generuje nowy zestaw propozycji dla fragmentu (przycisk „Nowy zestaw…").
-// Aktualizuje liste i — jesli otwarty dla tego fragmentu — popover.
 async function regenerateProposals(idx, btn) {
   const f = CURRENT.findings[idx];
   if (!f) return;
   const orig = btn ? btn.textContent : "";
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Generuję…";
-  }
+  if (btn) { btn.disabled = true; btn.textContent = "Generuję…"; }
   try {
     const data = await fetchProposals(f);
     const props = data.proposals || [];
     if (props.length) {
       f.proposals = props;
       renderFindings(CURRENT.findings);
-      const pop = $("popover");
-      if (pop.dataset.idx === String(idx) && !pop.classList.contains("hidden")) {
-        renderPopProposals(props);
-      }
+      updateNav();
     } else {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = orig;
-      }
-      const err = data.error ? ` (${data.error})` : "";
-      $("humanize-status").textContent = "Nie udało się wygenerować nowych propozycji." + err;
+      if (btn) { btn.disabled = false; btn.textContent = orig; }
+      $("humanize-status").textContent =
+        "Nie udało się wygenerować nowych propozycji." + (data.error ? ` (${data.error})` : "");
     }
   } catch (e) {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = orig;
-    }
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
     $("humanize-status").textContent = "Błąd generowania propozycji.";
   }
 }
 
-async function openRewrite(idx, anchor) {
-  const f = CURRENT.findings[idx];
-  if (!f) return;
-  const nextCh = CURRENT.text[f.end] || '';
-  if (/^[.!?…]$/.test(nextCh)) f.end += 1;
-  const quote = CURRENT.text.slice(f.start, f.end);
-  const pop = $("popover");
-  pop.dataset.idx = String(idx);
-  $("pop-quote").textContent = quote.length > 60 ? quote.slice(0, 60) + "…" : quote;
-  $("pop-reason").textContent = f.message + (f.suggestion ? "  →  " + f.suggestion : "");
-  $("pop-input").value = "";
-  $("pop-preview").innerHTML = PREVIEW_HINT;
-  positionPopover(anchor);
-
-  // Propozycje policzone juz przy analizie -> pokazujemy od razu, bez dogenerowywania.
-  if (f.proposals && f.proposals.length) {
-    renderPopProposals(f.proposals);
-    return;
-  }
-
-  $("pop-list").innerHTML = "<div class='pop-empty'>Generuję propozycje…</div>";
+async function copyAll() {
+  const text = $("text").value;
+  if (!text) return;
   try {
-    const ctxStart = Math.max(0, f.start - 80);
-    const ctxEnd = Math.min(CURRENT.text.length, f.end + 80);
-    const resp = await fetch("/api/rewrite", {
+    await navigator.clipboard.writeText(text);
+    $("humanize-status").textContent = "Skopiowano cały tekst do schowka.";
+  } catch (e) {
+    $("text").select();
+    $("humanize-status").textContent = "Zaznaczono tekst — skopiuj ręcznie (Ctrl/Cmd+C).";
+  }
+}
+
+function previewHTML(f, proposal) {
+  const quote = CURRENT.text.slice(f.start, f.end);
+  const ctx =
+    f.context ||
+    CURRENT.text.slice(Math.max(0, f.start - 100), Math.min(CURRENT.text.length, f.end + 100));
+  const marked = `<mark class="preview-new">${escapeHtml(proposal)}</mark>`;
+  const i = ctx.indexOf(quote);
+  if (i < 0) return marked;
+  return escapeHtml(ctx.slice(0, i)) + marked + escapeHtml(ctx.slice(i + quote.length));
+}
+
+function setLeftMode(mode) {
+  $("text").classList.toggle("hidden", mode === "view");
+  $("text").classList.toggle("dimmed", mode === "loading");
+  $("text-loader").classList.toggle("hidden", mode !== "loading");
+  $("highlighted").classList.toggle("hidden", mode !== "view");
+  $("legend").classList.toggle("hidden", mode !== "view");
+  $("edit-text").classList.toggle("hidden", mode !== "view");
+}
+
+async function analyze() {
+  const text = $("text").value.trim();
+  if (!text) { $("status").textContent = "Wklej najpierw tekst."; return; }
+  $("analyze").disabled = true;
+  $("analyze").classList.add("loading");
+  $("status").textContent = "Analizuję...";
+  setLeftMode("loading");
+  try {
+    const humanize = $("with-humanize").checked;
+    if (humanize) $("status").textContent = "Analizuję i generuję propozycje…";
+    const resp = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        quote,
-        context: CURRENT.text.slice(ctxStart, ctxEnd),
-        reason: f.message || "",
-        model: selectedModel(),
-      }),
+      body: JSON.stringify({ text, model: selectedModel(), humanize }),
     });
-    const data = await resp.json();
-    // Popover mogl zostac zamkniety lub przelaczony w miedzyczasie.
-    if (pop.dataset.idx !== String(idx) || pop.classList.contains("hidden")) return;
-    const props = data.proposals || [];
-    if (props.length) {
-      $("pop-list").innerHTML = props
-        .map((p, j) => `<button class="pop-opt" data-prop="${j}">${escapeHtml(p)}</button>`)
-        .join("");
-      pop._props = props;
-    } else {
-      const hint = f.suggestion
-        ? `Podpowiedź: ${escapeHtml(f.suggestion)}`
-        : "Brak propozycji LLM — wpisz własną wersję poniżej.";
-      const err = data.error ? ` (${escapeHtml(data.error)})` : "";
-      $("pop-list").innerHTML = `<div class='pop-empty'>${hint}${err}</div>`;
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Błąd ${resp.status}`);
     }
-    positionPopover();
+    const report = await resp.json();
+    renderReport(report);
+    setLeftMode("view");
+    $("status").textContent = `Gotowe (${report.word_count} słów).`;
   } catch (e) {
-    if (pop.dataset.idx === String(idx)) {
-      $("pop-list").innerHTML = "<div class='pop-empty'>Błąd pobierania propozycji.</div>";
-      positionPopover();
-    }
+    setLeftMode("edit");
+    $("status").textContent = "Błąd: " + e.message;
+  } finally {
+    $("analyze").disabled = false;
+    $("analyze").classList.remove("loading");
   }
 }
 
@@ -508,53 +669,6 @@ async function humanizeAll() {
   }
 }
 
-// Tryby lewego okna: edycja (textarea), ladowanie (spinner), podglad (podswietlenia).
-function setLeftMode(mode) {
-  // Textarea widoczna w trybie edycji ORAZ ladowania (blado w tle pod loaderem).
-  $("text").classList.toggle("hidden", mode === "view");
-  $("text").classList.toggle("dimmed", mode === "loading");
-  $("text-loader").classList.toggle("hidden", mode !== "loading");
-  $("highlighted").classList.toggle("hidden", mode !== "view");
-  $("legend").classList.toggle("hidden", mode !== "view");
-  $("edit-text").classList.toggle("hidden", mode !== "view");
-}
-
-async function analyze() {
-  const text = $("text").value.trim();
-  if (!text) {
-    $("status").textContent = "Wklej najpierw tekst.";
-    return;
-  }
-  $("analyze").disabled = true;
-  $("analyze").classList.add("loading");
-  $("status").textContent = "Analizuję...";
-  closePopover();
-  setLeftMode("loading");
-  try {
-    const humanize = $("with-humanize").checked;
-    if (humanize) $("status").textContent = "Analizuję i generuję propozycje…";
-    const resp = await fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, model: selectedModel(), humanize }),
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `Błąd ${resp.status}`);
-    }
-    const report = await resp.json();
-    renderReport(report);
-    setLeftMode("view");
-    $("status").textContent = `Gotowe (${report.word_count} słów).`;
-  } catch (e) {
-    setLeftMode("edit");
-    $("status").textContent = "Błąd: " + e.message;
-  } finally {
-    $("analyze").disabled = false;
-    $("analyze").classList.remove("loading");
-  }
-}
-
 async function loadModels() {
   try {
     const resp = await fetch("/api/models");
@@ -580,11 +694,11 @@ async function loadModels() {
       if (r) localStorage.setItem("detektor_model", r.value);
     });
   } catch (e) {
-    // Brak listy modeli - analiza pojdzie modelem domyslnym z serwera.
+    // No model list — analysis uses server default.
   }
 }
 
-// ---------- Wiazanie zdarzen ----------
+// ---------- Event binding ----------
 
 $("analyze").addEventListener("click", analyze);
 $("humanize-all").addEventListener("click", humanizeAll);
@@ -592,27 +706,34 @@ $("copy-all").addEventListener("click", copyAll);
 $("edit-text").addEventListener("click", () => {
   $("text").value = CURRENT.text || $("text").value;
   setLeftMode("edit");
-  closePopover();
   $("text").focus();
+});
+
+$("bar-details-toggle").addEventListener("click", () => {
+  const expand = $("analysis-expand");
+  const btn = $("bar-details-toggle");
+  const isOpen = !expand.classList.contains("hidden");
+  expand.classList.toggle("hidden", isOpen);
+  btn.setAttribute("aria-expanded", String(!isOpen));
+  btn.textContent = isOpen ? "Oceny i wymiary ▾" : "Oceny i wymiary ▴";
 });
 
 $("highlighted").addEventListener("click", (e) => {
   const mark = e.target.closest("mark[data-idx]");
-  if (mark) openRewrite(Number(mark.dataset.idx), mark);
+  if (mark) navigateTo(Number(mark.dataset.idx));
 });
 
 $("findings").addEventListener("click", (e) => {
-  const show = e.target.closest(".show-props");
-  if (show) {
-    openRewrite(Number(show.dataset.idx), show);
-    return;
-  }
+  const load = e.target.closest(".load-props");
+  if (load) { loadProposalsForFinding(Number(load.dataset.idx)); return; }
+
   const opt = e.target.closest(".prop-opt");
   if (opt) {
     const f = CURRENT.findings[Number(opt.dataset.idx)];
     if (f && f.proposals) applyReplacement(Number(opt.dataset.idx), f.proposals[Number(opt.dataset.prop)]);
     return;
   }
+
   const capply = e.target.closest(".prop-custom-apply");
   if (capply) {
     const input = capply.closest(".finding").querySelector("input[data-idx]");
@@ -620,8 +741,14 @@ $("findings").addEventListener("click", (e) => {
     if (val) applyReplacement(Number(capply.dataset.idx), val);
     return;
   }
+
   const regen = e.target.closest(".regen-btn");
-  if (regen) regenerateProposals(Number(regen.dataset.idx), regen);
+  if (regen) { regenerateProposals(Number(regen.dataset.idx), regen); return; }
+
+  const li = e.target.closest("li.finding");
+  if (li && !e.target.closest("button") && !e.target.closest("input")) {
+    navigateTo(Number(li.dataset.idx));
+  }
 });
 
 $("findings").addEventListener("mouseover", (e) => {
@@ -629,57 +756,35 @@ $("findings").addEventListener("mouseover", (e) => {
   if (!opt) return;
   const f = CURRENT.findings[Number(opt.dataset.idx)];
   const prev = opt.closest(".finding").querySelector(".prop-preview");
-  if (f && prev) {
-    prev.innerHTML = previewHTML(f, f.proposals[Number(opt.dataset.prop)]);
-  }
+  if (f && prev) prev.innerHTML = previewHTML(f, f.proposals[Number(opt.dataset.prop)]);
 });
 $("findings").addEventListener("mouseout", (e) => {
   const opt = e.target.closest(".prop-opt");
   if (opt) opt.closest(".finding").querySelector(".prop-preview").innerHTML = PREVIEW_HINT;
 });
 
-$("pop-close").addEventListener("click", closePopover);
-$("pop-regen").addEventListener("click", () => {
-  const idx = Number($("popover").dataset.idx);
-  if (!Number.isNaN(idx)) regenerateProposals(idx, $("pop-regen"));
+$("nav-prev").addEventListener("click", () => navigateTo(ACTIVE_IDX - 1));
+$("nav-next").addEventListener("click", () => navigateTo(ACTIVE_IDX + 1));
+$("nav-apply").addEventListener("click", () => {
+  const f = CURRENT.findings[ACTIVE_IDX];
+  if (f && f.proposals && f.proposals.length) applyReplacement(ACTIVE_IDX, f.proposals[0]);
 });
-$("pop-list").addEventListener("click", (e) => {
-  const opt = e.target.closest(".pop-opt");
-  if (!opt) return;
-  const props = $("popover")._props || [];
-  const j = Number(opt.dataset.prop);
-  if (props[j] != null) applyReplacement(Number($("popover").dataset.idx), props[j]);
-});
-$("pop-list").addEventListener("mouseover", (e) => {
-  const opt = e.target.closest(".pop-opt");
-  if (!opt) return;
-  const f = CURRENT.findings[Number($("popover").dataset.idx)];
-  const props = $("popover")._props || [];
-  const j = Number(opt.dataset.prop);
-  if (f && props[j] != null) {
-    $("pop-preview").innerHTML = previewHTML(f, props[j]);
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (CURRENT.findings.length === 0) return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); navigateTo(ACTIVE_IDX - 1); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); navigateTo(ACTIVE_IDX + 1); }
+  else if (e.key === "Enter" && ACTIVE_IDX >= 0) {
+    const f = CURRENT.findings[ACTIVE_IDX];
+    if (f && f.proposals && f.proposals.length) { e.preventDefault(); applyReplacement(ACTIVE_IDX, f.proposals[0]); }
   }
 });
-$("pop-list").addEventListener("mouseout", () => ($("pop-preview").innerHTML = PREVIEW_HINT));
-$("pop-apply").addEventListener("click", () => {
-  const val = $("pop-input").value.trim();
-  if (val) applyReplacement(Number($("popover").dataset.idx), val);
-});
-$("pop-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") $("pop-apply").click();
-});
 
-document.addEventListener("click", (e) => {
-  const pop = $("popover");
-  if (pop.classList.contains("hidden")) return;
-  if (pop.contains(e.target)) return;
-  if (e.target.closest("mark[data-idx]") || e.target.closest(".show-props")) return;
-  closePopover();
-});
-
-window.addEventListener("resize", () => {
-  if (!$("popover").classList.contains("hidden")) positionPopover();
-});
+// Keep --abar-h in sync so col-right sticky top is always correct.
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--abar-h", `${$("analysis-bar").offsetHeight}px`);
+}).observe($("analysis-bar"));
 
 // Word / character count
 (function () {

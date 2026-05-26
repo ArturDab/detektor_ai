@@ -24,6 +24,88 @@
     </div>
   </header>
 
+  <!-- ═══ Analysis bar: controls + results (sticky below topbar) ═══ -->
+  <div id="analysis-bar" class="analysis-bar">
+    <div class="abar-inner">
+      <!-- Row 1: always visible -->
+      <div class="abar-controls">
+        <button id="analyze">Analizuj</button>
+        <div class="model-pick">
+          <span class="field-label">Model LLM</span>
+          <div id="model" class="model-radios"></div>
+        </div>
+        <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
+          <input type="checkbox" id="with-humanize" /> Z propozycjami humanizacji
+        </label>
+        <span id="status" class="status"></span>
+      </div>
+      <!-- Row 2: shown after analysis -->
+      <div id="abar-results" class="abar-results hidden">
+        <div class="abar-scores">
+          <div class="abar-score-wrap">
+            <span class="abar-score-label">Jakość / slop</span>
+            <div id="bar-gauge-slop" class="gauge-wrap"></div>
+          </div>
+          <div class="abar-score-wrap">
+            <span class="abar-score-label">Sygnał AI</span>
+            <div id="bar-gauge-ai" class="gauge-wrap"></div>
+          </div>
+        </div>
+        <div id="abar-verdict" class="abar-verdict">
+          <div id="verdict-headline" class="verdict-headline"></div>
+          <div id="verdict-sub" class="verdict-sub"></div>
+        </div>
+        <div class="abar-actions">
+          <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
+          <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
+          <span id="humanize-status" class="status"></span>
+          <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Oceny i wymiary ▾</button>
+        </div>
+      </div>
+    </div>
+    <!-- Expandable: full scores + LLM comment + dimensions -->
+    <div id="analysis-expand" class="analysis-expand hidden">
+      <div class="expand-inner">
+        <div id="llm-error" class="alert alert-error hidden"></div>
+        <div id="notes" class="notes"></div>
+        <div class="scores">
+          <div class="score-card card">
+            <div class="score-head">
+              <h2>Jakość tekstu</h2>
+              <span class="score-hint">0 = rzetelny tekst · 100 = czysty „slop"</span>
+            </div>
+            <div id="gauge-slop" class="gauge-wrap"></div>
+            <div id="band-slop" class="band"></div>
+            <details class="details">
+              <summary>Szczegóły oceny</summary>
+              <div id="conf-slop" class="conf"></div>
+              <div id="break-slop" class="breakdown"></div>
+            </details>
+          </div>
+          <div class="score-card card">
+            <div class="score-head">
+              <h2>Sygnał autorstwa AI</h2>
+              <span class="score-hint">0 = raczej człowiek · 100 = raczej AI</span>
+            </div>
+            <div id="gauge-ai" class="gauge-wrap"></div>
+            <div id="band-ai" class="band"></div>
+            <details class="details">
+              <summary>Szczegóły oceny</summary>
+              <div id="conf-ai" class="conf"></div>
+              <div id="break-ai" class="breakdown"></div>
+              <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
+            </details>
+          </div>
+        </div>
+        <div id="llm-explanation" class="llm-box hidden"></div>
+        <div class="exp-panel">
+          <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
+          <div id="dimensions" class="dimensions">Brak danych z LLM (tryb heurystyczny).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <main class="layout">
     <div class="two-col">
       <div class="col-left">
@@ -53,93 +135,24 @@
       </div>
 
       <div class="col-right">
-        <div class="controls-card card">
-          <button id="analyze">Analizuj</button>
-          <div class="model-pick">
-            <span class="field-label">Model LLM</span>
-            <div id="model" class="model-radios"></div>
-          </div>
-          <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
-            <input type="checkbox" id="with-humanize" /> Z propozycjami humanizacji
-          </label>
-          <span id="status" class="status"></span>
+        <!-- Navigation bar -->
+        <div id="finding-nav" class="finding-nav hidden">
+          <button id="nav-prev" class="nav-btn" title="Poprzedni fragment (←)">&#8592;</button>
+          <span id="nav-pos" class="nav-pos">0 / 0</span>
+          <button id="nav-next" class="nav-btn" title="Następny fragment (→)">&#8594;</button>
+          <button id="nav-apply" class="nav-apply" title="Zastosuj pierwszą propozycję i przejdź dalej">✓ Zastosuj</button>
+          <span id="nav-done" class="nav-done"></span>
         </div>
-
-        <div id="results" class="results hidden">
-          <div class="results-bar card">
-            <button id="copy-all" class="btn-copy">Kopiuj cały tekst</button>
-            <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
-            <span id="humanize-status" class="status"></span>
-          </div>
-
-          <div id="verdict" class="verdict card">
-            <div id="verdict-headline" class="verdict-headline"></div>
-            <div id="verdict-sub" class="verdict-sub"></div>
-          </div>
-
-          <div id="llm-error" class="alert alert-error hidden"></div>
-          <div id="notes" class="notes"></div>
-
-          <div class="scores">
-            <div class="score-card card">
-              <div class="score-head">
-                <h2>Jakość tekstu</h2>
-                <span class="score-hint">0 = rzetelny tekst · 100 = czysty „slop"</span>
-              </div>
-              <div id="gauge-slop" class="gauge-wrap"></div>
-              <div id="band-slop" class="band"></div>
-              <details class="details">
-                <summary>Szczegóły oceny</summary>
-                <div id="conf-slop" class="conf"></div>
-                <div id="break-slop" class="breakdown"></div>
-              </details>
-            </div>
-            <div class="score-card card">
-              <div class="score-head">
-                <h2>Sygnał autorstwa AI</h2>
-                <span class="score-hint">0 = raczej człowiek · 100 = raczej AI</span>
-              </div>
-              <div id="gauge-ai" class="gauge-wrap"></div>
-              <div id="band-ai" class="band"></div>
-              <details class="details">
-                <summary>Szczegóły oceny</summary>
-                <div id="conf-ai" class="conf"></div>
-                <div id="break-ai" class="breakdown"></div>
-                <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
-              </details>
-            </div>
-          </div>
-
-          <div id="llm-explanation" class="llm-box card hidden"></div>
-
-          <div class="panel card">
-            <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
-            <div id="dimensions" class="dimensions">Brak danych z LLM (tryb heurystyczny).</div>
-          </div>
-
-          <div class="panel card">
+        <!-- Proposals panel -->
+        <div class="proposals-panel">
+          <div class="proposals-head">
             <h3>Propozycje zmian <span id="findings-count" class="muted"></span></h3>
-            <ul id="findings" class="findings"></ul>
           </div>
+          <ul id="findings" class="findings"></ul>
         </div>
       </div>
     </div>
   </main>
-
-  <div id="popover" class="popover hidden">
-    <div class="pop-head">
-      <span id="pop-quote" class="pop-quote"></span>
-      <button id="pop-close" class="pop-close" aria-label="Zamknij">×</button>
-    </div>
-    <div id="pop-reason" class="pop-reason"></div>
-    <div id="pop-list" class="pop-list"></div>
-    <button id="pop-regen" class="regen-btn">↻ Nowe propozycje</button>
-    <div id="pop-preview" class="pop-preview"></div>
-    <div class="pop-custom">
-      <input id="pop-input" type="text" placeholder="Wpisz własną wersję..." />
-      <button id="pop-apply">Zastosuj</button>
-    </div>
-  </div>
 
   <script src="/static/app.js"></script>
 </body>
