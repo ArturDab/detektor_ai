@@ -649,4 +649,19 @@ window.addEventListener("resize", () => {
   if (!$("popover").classList.contains("hidden")) positionPopover();
 });
 
+// Word / character count
+(function () {
+  const ta = $("text");
+  const el = $("word-count");
+  if (!ta || !el) return;
+  function update() {
+    const val = ta.value;
+    if (!val.trim()) { el.textContent = ""; return; }
+    const words = val.trim().split(/\s+/).length;
+    el.textContent = `${words.toLocaleString("pl-PL")} słów · ${val.length.toLocaleString("pl-PL")} znaków`;
+  }
+  ta.addEventListener("input", update);
+  update();
+}());
+
 loadModels();
