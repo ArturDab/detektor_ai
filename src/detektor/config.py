@@ -19,6 +19,15 @@ MODEL_CHOICES: list[dict[str, str]] = [
 
 MODEL_IDS: frozenset[str] = frozenset(m["id"] for m in MODEL_CHOICES)
 
+# Wyselekcjonowana, krotka lista modeli pokazywana w UI: najnowsze, tekstowe
+# (bez modeli do generowania obrazow), sprawdzone. Kolejnosc = kolejnosc w UI.
+CURATED_MODEL_IDS: tuple[str, ...] = (
+    "gemini-3.5-flash",
+    "gemini-3.1-pro-preview",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite",
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

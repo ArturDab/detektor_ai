@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 
-from detektor.config import MODEL_IDS, Settings, get_settings
+from detektor.config import CURATED_MODEL_IDS, MODEL_IDS, Settings, get_settings
 from detektor.humanize import attach_proposals, humanize_text
 from detektor.llm import GeminiJudge
 from detektor.llm.discovery import list_available_models
@@ -81,11 +81,32 @@ def _annotate(items: list[dict[str, str]]) -> list[dict[str, str]]:
     return out
 
 
+def _is_image_model(model_id: str) -> bool:
+    mid = model_id.lower()
+    return "image" in mid or "imagen" in mid
+
+
+def _curate(items: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Zaweza liste do 3-4 wyselekcjonowanych, tekstowych modeli (bez generowania
+    obrazow). Bierze modele z CURATED_MODEL_IDS, ktore sa realnie dostepne."""
+    available = {m["id"]: m for m in items}
+    curated = [available[mid] for mid in CURATED_MODEL_IDS if mid in available]
+    if curated:
+        return curated
+    # Fallback: zadne z wyselekcjonowanych nie pasuje do dostepnych nazw -> pokaz
+    # do 4 dostepnych modeli tekstowych (z wykluczeniem generowania obrazow).
+    return [m for m in items if not _is_image_model(m["id"])][:4]
+
+
 @app.get("/api/models")
 def models() -> dict:
     settings = get_settings()
     items, source = list_available_models(settings)
-    return {"models": _annotate(items), "default": settings.gemini_model, "source": source}
+    curated = _curate(items)
+    default = settings.gemini_model
+    if curated and default not in {m["id"] for m in curated}:
+        default = curated[0]["id"]
+    return {"models": _annotate(curated), "default": default, "source": source}
 
 
 @app.post("/api/analyze", response_model=Report)
