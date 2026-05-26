@@ -19,59 +19,65 @@ Hybryda: deterministyczne heurystyki + opcjonalny sędzia LLM (Gemini).
 - Frontend: szablon Jinja2 + **vanilla JS** + CSS (font **Geist** z Google Fonts). Brak frameworka JS, brak builda frontu.
 - Testy: pytest (LLM mockowany, suite działa offline). Lint/format: ruff. **Typecheck: brak** (nie skonfigurowano mypy).
 - Hosting: **Railway**, projekt `detektor_ai`, env `production`, service `web`. Wdrożenie przez **natywną integrację GitHub↔Railway** → auto-build (Nixpacks). Entrypoint: `detektor_web.app:app`, port z `$PORT`.
-- **Gałąź integracyjna = `main`** (PR-y celują w `main`, squash-merge). **Railway auto-deployuje z `main`** (panel: service `web` → Settings → Source → Branch = `main`, „Auto deploys when pushed to GitHub" = ON, „Wait for CI" = OFF — brak CI w repo). Deploy = po prostu merge PR do `main` (patrz §9).
+- **Gałąź integracyjna = `main`** (PR-y celują w `main`, squash-merge). **Railway auto-deployuje z `main`** (panel: service `web` → Settings → Source → Branch = `main`, „Auto deploys when pushed to GitHub" = ON, „Wait for CI" = OFF — brak CI w repo). Deploy = po prostu merge PR do `main`.
 - Klucz `GEMINI_API_KEY` ustawiany w panelu Railway (NIE w repo). Bez klucza apka działa w trybie heurystyk.
 
-## 3. Aktualny stan implementacji (zweryfikowane: kod, 32/32 testów, ruff czysto, deploy #14 z `main` SUCCESS)
+## 3. Aktualny stan implementacji (zweryfikowane: kod, 34/34 testów, ruff czysto, deploy #25 z `main`)
 - Rdzeń: segmentacja PL, 5 heurystyk, fuzja w 2 wskaźniki, sędzia Gemini (`gemini_judge.py`).
 - Endpointy: `GET /healthz`, `GET /api/models`, `POST /api/analyze` (param `humanize`, `judge`), `POST /api/rewrite`, `POST /api/humanize`.
-- **Tryb heurystyczny na żądanie:** `analyze_text(..., use_llm=False)` / `/api/analyze {"judge": false}` pomija sędziego LLM (szybko, bez kosztu) — używane do live-przeliczania ocen.
-- **UI (układ dwukolumnowy):**
-  - Lewa kolumna = **jedno okno tekstu**: textarea (wsad) → nakładka ze spinnerem na czas analizy → podświetlony tekst z propozycjami w tym samym oknie. Przycisk „Edytuj / wklej nowy" wraca do edycji. Stany: `setLeftMode("edit"|"loading"|"view")` w `app.js`.
-  - Prawa kolumna (sticky) = „Analizuj" + wybór modelu + opcje na górze; werdykt 2×2, dwa wskaźniki, wymiary, lista propozycji — **ukryte do pierwszej analizy**.
-  - **Oceny na bieżąco:** po zastosowaniu propozycji `refreshScores()` przelicza wskaźniki heurystycznie (`judge=false`), bez czekania/kosztu; pełna ocena LLM po ponownym „Analizuj".
+- **Tryb heurystyczny na żądanie:** `analyze_text(..., use_llm=False)` / `/api/analyze {"judge": false}` pomija sędziego LLM — używane do live-przeliczania ocen.
+- **UI (układ dwukolumnowy) — po pełnym redesignie wg kitu Figmy (Geist + Slate + Indigo):**
+  - Lewa kolumna = karta `text-pane`: textarea (wsad) → nakładka spinner → podświetlony tekst. Textarea wypełnia viewport (`calc(100vh - topbar - 200px)`). Przycisk „Edytuj / wklej nowy" wraca do edycji. Stany: `setLeftMode("edit"|"loading"|"view")`.
+  - Prawa kolumna = **unified panel card** (`.col-right`): sekcje (controls, results-bar, verdict, scores, llm-box, panels) to bezpośrednie dzieci `.col-right`, dzięki `.results { display: contents }`. Sticky scroll; sekcje rozdzielone `border-bottom`.
+  - Radiobuttony do wyboru modelu (kurowana lista 3–4 modeli Gemini, bez modeli do generowania obrazów).
+  - Formatowanie tekstu: `formatParagraphs()` dzieli na `<p class="hl-p">` i wykrywa nagłówki (`.hl-heading` ≤70 znaków, bez kropki na końcu).
+  - **Brak jednostronnych obramowań dekoracyjnych** — popover, pop-quote, verdict, finding .quote, .note mają symetryczne bordy lub tło (kolor nastroju werdyktu = tło: ok=zielony, warn=bursztynowy).
+  - **Oceny na bieżąco:** `refreshScores()` przelicza heurystycznie po każdej zamianie propozycji.
   - **„Kopiuj cały tekst"** (sticky pasek akcji) + „Humanizuj wszystko".
-- Humanizacja: propozycje per fragment (3 + pole własne), podgląd zdania w **stałym slocie** (nie „skacze") — w liście i w popoverze, klik we fragment (popover), „Humanizuj wszystko". Przepisania **równoległe**.
-- Diagnostyka błędu LLM: `Report.llm_error` + notatka z „Powód: …". Polskie znaki w heurystykach/UI/YAML OK.
+- Humanizacja: propozycje per fragment (3 + pole własne), podgląd w stałym slocie, przepisania równoległe.
+- Diagnostyka błędu LLM: `Report.llm_error` + notatka „Powód: …".
 
 ## 4. Aktywna faza
-Weryfikacja nowego UI + poprawki timeoutu propozycji na produkcji. Równolegle wciąż otwarte: potwierdzenie sędziego/humanizacji na modelu **Flash** end-to-end.
+Weryfikacja wizualna redesignu na produkcji (render lokalny niemożliwy — brak Chromium). Równolegle otwarte: potwierdzenie sędziego/humanizacji na Flash end-to-end.
 
 ## 5. Ukończone fazy
 1. Rdzeń heurystyk + fuzja + sędzia LLM (+ tryb bez klucza).
 2. Wdrożenie na Railway (live, auto-deploy z GitHub).
-3. Diagnostyka błędu LLM + jasny redesign UI (Geist) + werdykt 2×2.
+3. Diagnostyka błędu LLM + redesign UI (Geist) + werdykt 2×2.
 4. Wybór modelu w panelu + dynamiczna lista modeli z Google API (fallback statyczny).
 5. Poprawa polskich znaków (heurystyki, dane YAML, UI).
 6. Humanizacja: propozycje, podgląd, „Humanizuj wszystko".
 7. Zrównoleglenie przepisań (fix „Failed to fetch").
-8. Układ dwukolumnowy, live przeliczanie ocen (`use_llm`/`judge`), „Kopiuj cały tekst", stały slot podglądu (#10).
-9. Jedno okno tekstu (wsad/spinner/podświetlenia), sterowanie+oceny w prawej kolumnie, fix popovera (#11); fix `.hidden` (loader/legenda zasłaniały pole — #12).
-10. Utworzenie gałęzi `main` + zasada auto-merge (squash) w §0.
-11. **Migracja źródła deployu Railway na `main`** (trigger branch = `main`, auto-deploy ON, Wait for CI OFF). Fix timeoutu propozycji na modelach Pro + etykiety modeli z kompromisem szybkość/dokładność (#14).
+8. Układ dwukolumnowy, live przeliczanie ocen, „Kopiuj cały tekst", stały slot podglądu (#10).
+9. Jedno okno tekstu (wsad/spinner/podświetlenia), fix `.hidden` (#11–#12).
+10. Gałąź `main` + auto-merge (squash); migracja źródła deployu Railway na `main` (#13–#14).
+11. Fix timeoutu propozycji (`rewrite_timeout_s` 12→30 s) + etykiety modeli (#14).
+12. Fix popovera (wychodzi poza viewport → `position: fixed` + przycinanie) (#18).
+13. **Pełny redesign UI wg kitu Figmy** (Geist + Slate + Indigo, unified right panel, accordion, `display:contents` na `.results`, karty findings/popover, radiobuttony modeli, `formatParagraphs`) (#21–#24).
+14. **Usunięcie jednostronnych obramowań + textarea wypełnia viewport** (#25).
 
 ## 6. Następne działania (priorytetowo)
-1. **Zweryfikować nowy UI + fix propozycji na produkcji** (render lokalnie niemożliwy — brak Chromium): jedno okno (wsad→spinner→podświetlenia), prawa kolumna z „Analizuj", live oceny, kopiowanie, popover bez „skakania"; propozycje generują się dla Flash (szybko) i Pro (wolniej, bez wiszącego spinnera); dropdown modeli z adnotacją szybkość/dokładność.
-2. **Potwierdzić LLM na produkcji** modelem Flash (np. `gemini-3-flash-preview` / `gemini-3.5-flash`); sprawdzić logi Railway pod `Gemini:`/`Gemini rewrite`.
-3. Rozważyć zmianę domyślnego `GEMINI_MODEL` (env Railway) z `gemini-3.1-pro-preview` na Flash.
-4. (Opcjonalnie) propozycje w tle dla modeli Pro (długa latencja); dodać typecheck (mypy/pyright).
+1. **Zweryfikować nowy UI na produkcji** (wizualnie, bo render lokalnie niemożliwy): unified panel, karty propozycji, radiobuttony modeli, formatowanie tekstu (akapity/nagłówki), brak indygowego paska na popoverze, textarea duże, werdykt bez lewego bordera.
+2. **Potwierdzić LLM Flash end-to-end** — sprawdzić logi Railway pod `Gemini:`/`Gemini rewrite` dla modelu `gemini-3-flash-preview` lub `gemini-3.5-flash`.
+3. Rozważyć zmianę domyślnego `GEMINI_MODEL` (env Railway) z `gemini-3.1-pro-preview` na Flash (szybciej, mniej błędów).
+4. (Opcjonalnie) typecheck (mypy/pyright); propozycje w tle dla modeli Pro.
 
 ## 7. Znane problemy / blokery / ryzyka
-- **Zmiana gałęzi-triggera Railway tylko z panelu UI.** Railway MCP/agent potrafi zmienić `source.branch`, ale NIE „deployment trigger" (gałąź auto-deployu) — to wymaga panelu (Settings → Source). „Wait for CI" MUSI być OFF (brak CI w repo, inaczej deploy czeka w nieskończoność na nieistniejące checki).
+- **Brak Chromium/Playwright** — zmian frontu NIE da się zweryfikować lokalnie; wyłącznie na produkcji po deployu.
+- **Sieć sandboxa blokuje hosty Railway** (`*.up.railway.app` → „Host not in allowlist"): brak curla produkcji. Operacje Railway → Railway MCP.
 - **Railway agent (MCP) bywa rate-limited** („Agent usage limit reached"). `get-status`/`get-logs`/`list-deployments` działają niezależnie.
-- **Sieć sandboxa blokuje hosty Railway** (`*.up.railway.app` itp. → „Host not in allowlist"): brak curla produkcji/CLI. Dozwolone: GitHub, npm, Google Fonts, api.anthropic.com. Operacje na Railway → Railway MCP.
-- **Brak Chromium/Playwright w tym środowisku** — zmian frontu NIE da się zweryfikować renderem lokalnie; weryfikacja dopiero po deployu na produkcji.
-- **LLM judge z `gemini-3.1-pro-preview` wcześniej zwracał błąd**; z `gemini-3-flash-preview` brak błędu w logach → ZAŁOŻENIE, że Flash działa (niepotwierdzone end-to-end).
-- Humanizacja jest LLM-zależna: bez klucza/modelu propozycje puste (degradacja: pole własne + podpowiedź heurystyki).
-- Brak skonfigurowanego CI/checków w repo → auto-merge nie ma na co czekać; w praktyce PR scala się od razu (squash) ręcznym `merge_pull_request`.
-- Przestarzałe gałęzie (nie używać jako bazy): `claude/railway-deployment-completion-iCbZt`.
+- **Zmiana gałęzi-triggera Railway tylko z panelu UI** (nie MCP). „Wait for CI" MUSI być OFF.
+- **LLM judge z `gemini-3.1-pro-preview` wcześniej zwracał błąd** — ZAŁOŻENIE, że Flash działa (niepotwierdzone end-to-end po redesignie).
+- Brak CI/checków w repo → `enable_pr_auto_merge` wymaga branch protection (nie skonfigurowanej) → w praktyce merge ręczny `merge_pull_request` (squash).
+- Przestarzałe gałęzie (nie używać jako bazy): `claude/railway-deployment-completion-iCbZt`, stare dev-branche sesji redesignu.
 
 ## 8. Ważne decyzje architektoniczne (skrót; pełne w docs/DECISIONS.md)
-- Deploy = **natywna integracja GitHub↔Railway** (nie CLI/MCP), bo sandbox nie ma sieci do Railway.
-- **`main` to gałąź integracyjna**; dev-branch opieraj na `origin/main`, PR → `main`, squash-merge. Po squashu lokalny dev-branch przebazuj na `origin/main` (`git checkout -B <dev> origin/main`, force-with-lease).
-- **Deploy = merge PR do `main`** → Railway auto-build z `main` (trigger branch przełączony). Fast-forward starej gałęzi `claude/ai-slop-detection-tool-ye7nw` już NIE jest potrzebny (mechanizm historyczny).
-- **Live oceny** = drugie wywołanie `/api/analyze` z `judge=false` (heurystyki), aktualizuje tylko wskaźniki; lista fragmentów/podświetlenia zarządzane lokalnie po stronie frontu.
-- LLM zawsze opcjonalny; graceful degradation do heurystyk. Model per-żądanie (domyślny z env `GEMINI_MODEL`). Heurystyki sterowane YAML.
+- Deploy = **natywna integracja GitHub↔Railway** (nie CLI/MCP — sandbox nie ma sieci do Railway).
+- **`main` = gałąź integracyjna**; dev-branch opieraj na `origin/main`, PR → `main`, squash-merge. Po squashu: `git checkout -B <dev> origin/main` (force-with-lease po push).
+- **Konflikt merge = "save CSS → reset → restore"** (gdy main awansował przed push): wyciągnij zmienione pliki do /tmp, `git checkout -B branch origin/main`, przywróć pliki, commit, push.
+- **`.results { display: contents }`** — dzieci `.results` renderują bezpośrednio jako dzieci `.col-right`, co umożliwia sticky results-bar i jednolite obramowanie panelu bez zagnieżdżania kart.
+- **Live oceny** = `/api/analyze` z `judge=false`; lista fragmentów/podświetlenia zarządzane lokalnie.
+- LLM zawsze opcjonalny; graceful degradation do heurystyk. Model per-żądanie.
 
 ## 9. Kluczowe komendy
 ```bash
@@ -80,41 +86,47 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"   # lub: uv venv && uv
 # Dev server
 PYTHONPATH=src .venv/bin/uvicorn detektor_web.app:app --reload   # http://127.0.0.1:8000
 # Test / lint / format
-.venv/bin/pytest -q
+.venv/bin/pytest -q                        # 34 testów
 .venv/bin/ruff check src tests
 .venv/bin/ruff format src
-# JS: brak builda; sanity: node --check src/detektor_web/static/app.js
+node --check src/detektor_web/static/app.js   # sanity JS (brak builda)
 # Typecheck: brak (nie skonfigurowano). Baza/migracje: brak (apka bezstanowa).
 
-# Deploy na produkcję: scal PR do main (squash) -> Railway auto-build z main.
-# status/logi: Railway MCP get-status / get-logs / list-deployments
+# Deploy: scal PR do main (squash) → Railway auto-build z main.
+# Railway MCP: get-status / get-logs / list-deployments
 #   (project dc230d9e..., env 533baa05..., service 24b213f8...)
+# GitHub MCP: create_pull_request → merge_pull_request (squash)
+#   auto-merge NIE działa (brak branch protection) → merge ręcznie
 ```
 
 ## 10. Ważne pliki i katalogi
-- `src/detektor/` — rdzeń (bez web): `pipeline.py` (`analyze_text`, param `use_llm`), `fusion.py`, `models.py`, `config.py`, `humanize.py`.
+- `src/detektor/` — rdzeń: `pipeline.py`, `fusion.py`, `models.py`, `config.py` (`CURATED_MODEL_IDS`), `humanize.py`.
   - `heuristics/` + `data/*.yaml` — analizatory i leksykony.
   - `llm/` — `gemini_judge.py`, `rewriter.py`, `discovery.py`, `prompts.py`, `schema.py`.
-- `src/detektor_web/` — `app.py` (endpointy; `AnalyzeRequest.judge`), `templates/index.html` (układ dwukolumnowy), `static/app.js` (`setLeftMode`, `refreshScores`, `copyAll`, `PREVIEW_HINT`), `static/style.css`.
+- `src/detektor_web/` — `app.py` (`_curate()`, `_speed_hint()`, `_with_model()`), `templates/index.html` (radiobuttony modelu, `word-count`), `static/app.js` (`setLeftMode`, `refreshScores`, `formatParagraphs`, `loadModels`, `selectedModel`), `static/style.css` (~840 linii, tokeny w `:root`).
 - `tests/` — pytest. `pyproject.toml`, `requirements.txt`, `Procfile`, `.python-version`, `.env.example`.
-- `DEPLOY.md` — historyczny handoff Railway.
 
 ## 11. Strefy ostrożności (nie ruszać bez potrzeby)
-- W `heuristics/*.py` i `data/*.yaml`: **nie zmieniać regexów, kluczy ani wzorców** — tylko teksty `message`/`suggestion`.
-- Logika offsetów: `fusion._locate`, `humanize` (zmiany od końca), `app.js` `applyReplacement` (przesuwanie offsetów). Łatwo zepsuć podświetlenia.
-- Schematy structured-output (`llm/schema.py`) — zmiana psuje parsowanie odpowiedzi Gemini.
-- `Procfile`, `.python-version`, `requirements.txt` — wpływają na build Railway.
-- **CSS:** utility `.hidden` MUSI mieć `display: none !important` — inne reguły (`.text-loader`, `.legend`) ustawiają `display` i przy równej specyficzności by je nadpisały (był bug: loader zasłaniał pole tekstu).
-- `app.js`: `setLeftMode` steruje widocznością textarea/spinnera/podświetleń; `refreshScores` celowo NIE rusza listy fragmentów ani podświetleń (tylko wskaźniki).
+- **Offsety:** `fusion._locate`, `humanize` (zmiany od końca), `app.js applyReplacement` — łatwo zepsuć podświetlenia.
+- **`llm/schema.py`** — zmiana psuje parsowanie structured-output Gemini.
+- **`heuristics/*.py` i `data/*.yaml`** — nie zmieniać regexów/kluczy; tylko teksty `message`/`suggestion`.
+- **`Procfile`, `.python-version`, `requirements.txt`** — wpływają na build Railway.
+- **CSS — krytyczne reguły:**
+  - `.hidden { display: none !important }` — MUSI mieć `!important`; inne reguły ustawiają `display` z niższą specyficznością.
+  - `.results { display: contents }` + `.results.hidden { display: none !important }` — umożliwia unified panel; nie dodawać `display` do `.results` w innych regułach.
+  - `.col-right .card { background: transparent; border: none; box-shadow: none }` — strippuje indywidualne style kart wewnątrz prawej kolumny.
+  - Reguły `.panel` MUSZĄ być scoped do `.col-right .panel` — inaczej wyciekają do `.text-pane-head h3` (był bug: chevron i kreska w lewej kolumnie).
+  - `.col-right .results-bar { background: var(--surface-2) }` — musi mieć przynajmniej równą specyficzność co `.col-right .card { background: transparent }`, inaczej pasek akcji staje się przezroczysty.
+- **`app.js`:** `setLeftMode` steruje widocznością textarea/spinnera/podświetleń; `refreshScores` celowo NIE rusza listy fragmentów ani podświetleń.
 
 ## 12. Checklista weryfikacyjna (przed uznaniem zmiany za gotową)
-- [ ] `.venv/bin/pytest -q` → zielone (obecnie 32).
+- [ ] `.venv/bin/pytest -q` → 34 zielone.
 - [ ] `.venv/bin/ruff check src tests` → czysto; `ruff format src`.
-- [ ] `node --check src/detektor_web/static/app.js` → OK (zmiany JS).
-- [ ] Serwer wstaje; `GET /healthz` zwraca `{"status":"ok","llm_available":...,"model":...}`.
-- [ ] `POST /api/analyze` zwraca `slop`, `ai_provenance`, `findings`; `{"judge": false}` → bez `llm_error`.
+- [ ] `node --check src/detektor_web/static/app.js` → OK (przy zmianach JS).
+- [ ] Serwer wstaje; `GET /healthz` → `{"status":"ok","llm_available":...,"model":...}`.
+- [ ] `POST /api/analyze` → `slop`, `ai_provenance`, `findings`; `{"judge": false}` → brak `llm_error`.
 - [ ] Render frontu: **lokalnie niemożliwy (brak Chromium)** — zweryfikuj na produkcji po deployu.
-- [ ] Deploy: scal PR do `main` (squash) → Railway auto-build z `main`; po deployu sprawdź `list-deployments` (branch `main`, SUCCESS) i logi przez Railway MCP.
+- [ ] Deploy: scal PR do `main` (squash) → Railway auto-build; sprawdź `list-deployments` (branch `main`, SUCCESS).
 
 ## 13. Najnowsza nota handoff
-`main` = `5d9b844` (#14); produkcja na tym commicie (deploy `6c298a8a` SUCCESS, **branch `main`**). W tej sesji: **migracja źródła deployu Railway na `main`** (trigger branch = `main`, auto-deploy ON, Wait for CI OFF — potwierdzone deployem z `main`), fix timeoutu propozycji na modelach Pro (`rewrite_timeout_s` 12→30 s) + etykiety modeli w `/api/models` z adnotacją szybkość/dokładność (#14). **Najpilniejsze:** zweryfikować na produkcji generowanie propozycji (Flash szybko, Pro wolniej) i nowe etykiety modeli. Pełny handoff: `docs/HANDOFF.md`.
+`main` = `9c97dc1` (#25); Railway auto-deploy uruchomiony po merge. W tej sesji: **pełny redesign UI wg kitu Figmy** (Geist + Slate + Indigo, unified right panel z `display:contents`, radiobuttony modeli, `formatParagraphs`, kurowana lista modeli `CURATED_MODEL_IDS`) w PR-ach #21–#24; następnie **usunięcie jednostronnych obramowań** (popover `border-top`, pop-quote/verdict/finding-quote `border-left`, note `border-left`) + **textarea wypełnia viewport** (`calc(100vh - topbar - 200px)`) w PR #25. **Najpilniejsze:** wizualna weryfikacja na produkcji (brak Chromium lokalnie). Pełny handoff: `docs/HANDOFF.md`.
