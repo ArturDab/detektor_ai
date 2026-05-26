@@ -24,50 +24,51 @@
     </div>
   </header>
 
-  <!-- ═══ Analysis bar: controls + results (sticky below topbar) ═══ -->
+  <!-- ═══ Analysis bar ═══ -->
   <div id="analysis-bar" class="analysis-bar">
     <div class="abar-inner">
-      <!-- Row 1: always visible -->
+
+      <!-- Row 1: controls — always visible -->
       <div class="abar-controls">
         <button id="analyze">Analizuj</button>
-        <div class="model-pick">
-          <span class="field-label">Model LLM</span>
-          <div id="model" class="model-radios"></div>
-        </div>
+        <select id="model-select" class="model-select" title="Model LLM"></select>
         <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
-          <input type="checkbox" id="with-humanize" /> Z propozycjami humanizacji
+          <input type="checkbox" id="with-humanize" /> Z propozycjami
         </label>
         <span id="status" class="status"></span>
       </div>
-      <!-- Row 2: shown after analysis -->
+
+      <!-- Row 2: results — shown after analysis -->
       <div id="abar-results" class="abar-results hidden">
         <div class="abar-scores">
-          <div class="abar-score-wrap">
-            <span class="abar-score-label">Jakość / slop</span>
-            <div id="bar-gauge-slop" class="gauge-wrap"></div>
+          <div class="abar-score">
+            <span id="bar-num-slop" class="bar-score-num">—</span>
+            <span class="bar-score-lbl">Slop</span>
           </div>
-          <div class="abar-score-wrap">
-            <span class="abar-score-label">Sygnał AI</span>
-            <div id="bar-gauge-ai" class="gauge-wrap"></div>
+          <div class="abar-score-divider"></div>
+          <div class="abar-score">
+            <span id="bar-num-ai" class="bar-score-num">—</span>
+            <span class="bar-score-lbl">AI</span>
           </div>
         </div>
         <div id="abar-verdict" class="abar-verdict">
           <div id="verdict-headline" class="verdict-headline"></div>
-          <div id="verdict-sub" class="verdict-sub"></div>
         </div>
         <div class="abar-actions">
           <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
           <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
           <span id="humanize-status" class="status"></span>
-          <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Oceny i wymiary ▾</button>
+          <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Szczegóły ▾</button>
         </div>
       </div>
     </div>
-    <!-- Expandable: full scores + LLM comment + dimensions -->
+
+    <!-- Expandable: full scores + sub-verdict + LLM + dimensions -->
     <div id="analysis-expand" class="analysis-expand hidden">
       <div class="expand-inner">
         <div id="llm-error" class="alert alert-error hidden"></div>
         <div id="notes" class="notes"></div>
+        <div id="verdict-sub" class="verdict-sub expand-verdict-sub hidden"></div>
         <div class="scores">
           <div class="score-card card">
             <div class="score-head">
@@ -135,7 +136,7 @@
       </div>
 
       <div class="col-right">
-        <!-- Navigation bar -->
+        <!-- Navigation bar (visible when findings exist) -->
         <div id="finding-nav" class="finding-nav hidden">
           <button id="nav-prev" class="nav-btn" title="Poprzedni fragment (←)">&#8592;</button>
           <span id="nav-pos" class="nav-pos">0 / 0</span>
@@ -143,8 +144,22 @@
           <button id="nav-apply" class="nav-apply" title="Zastosuj pierwszą propozycję i przejdź dalej">✓ Zastosuj</button>
           <span id="nav-done" class="nav-done"></span>
         </div>
-        <!-- Proposals panel -->
-        <div class="proposals-panel">
+
+        <!-- Empty state (before analysis) -->
+        <div id="proposals-empty" class="proposals-empty">
+          <div class="empty-icon">✦</div>
+          <p class="empty-title">Gotowy do analizy</p>
+          <p class="empty-body">Wklej tekst w lewym oknie i kliknij <strong>Analizuj</strong>, aby zobaczyć propozycje zmian.</p>
+          <ul class="empty-list">
+            <li>Wykrywa frazesy i kliszé typowe dla AI</li>
+            <li>Identyfikuje powtarzalne struktury zdań</li>
+            <li>Ocenia informatywność akapitów</li>
+            <li>Proponuje bardziej ludzkie sformułowania</li>
+          </ul>
+        </div>
+
+        <!-- Proposals panel (after analysis) -->
+        <div id="proposals-panel" class="proposals-panel hidden">
           <div class="proposals-head">
             <h3>Propozycje zmian <span id="findings-count" class="muted"></span></h3>
           </div>

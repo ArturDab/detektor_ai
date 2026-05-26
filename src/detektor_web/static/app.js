@@ -22,8 +22,8 @@ function escapeHtml(s) {
 }
 
 function selectedModel() {
-  const r = document.querySelector('input[name="model"]:checked');
-  return r && r.value ? r.value : undefined;
+  const sel = $("model-select");
+  return sel && sel.value ? sel.value : undefined;
 }
 
 function colorFor(score) {
@@ -61,20 +61,6 @@ function gauge(score) {
   </svg>`;
 }
 
-function gaugeSmall(score) {
-  const r = 24;
-  const c = 2 * Math.PI * r;
-  const off = c * (1 - score / 100);
-  const color = colorFor(score).trim();
-  return `<svg viewBox="0 0 64 64" class="gauge gauge-sm">
-    <circle cx="32" cy="32" r="${r}" class="g-bg"></circle>
-    <circle cx="32" cy="32" r="${r}" class="g-fg"
-      style="stroke:${color};stroke-dasharray:${c.toFixed(1)};stroke-dashoffset:${off.toFixed(1)}"></circle>
-    <text x="32" y="30" class="g-num" style="font-size:15px">${score.toFixed(0)}</text>
-    <text x="32" y="41" class="g-cap" style="font-size:9px">/100</text>
-  </svg>`;
-}
-
 function renderVerdict(r) {
   const slop = r.slop.score;
   const ai = r.ai_provenance.score;
@@ -87,10 +73,12 @@ function renderVerdict(r) {
   else headline = "Generyczny tekst z wyraźnymi sygnałami AI.";
 
   $("verdict-headline").textContent = headline;
-  $("verdict-sub").innerHTML =
+  const sub = $("verdict-sub");
+  sub.innerHTML =
     `Jakość/slop: <strong>${slop.toFixed(0)}/100</strong> ` +
     `(${bandSlop(slop)}) &nbsp;·&nbsp; ` +
     `Sygnał AI: <strong>${ai.toFixed(0)}/100</strong> (${bandAi(ai)})`;
+  sub.classList.remove("hidden");
   $("abar-verdict").dataset.tone = slopHigh || aiHigh ? "warn" : "ok";
 }
 
@@ -100,101 +88,7 @@ function breakdownHtml(items) {
     .join(" &nbsp;|&nbsp; ");
 }
 
-// Parses raw text into structured blocks: headings, bullet lists, paragraphs.
-// Returns array of { type: 'h1'|'h2'|'ul'|'p', content, items? }
-function parseBlocks(text) {
-  const lines = text.split("\n");
-  const blocks = [];
-  let para = [];
-
-  function flushPara() {
-    const t = para.join("\n").trim();
-    if (t) blocks.push({ type: "p", content: t });
-    para = [];
-  }
-
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // Markdown-style headings
-    if (/^#{1,2}\s/.test(trimmed)) {
-      flushPara();
-      const level = trimmed.startsWith("## ") ? "h2" : "h1";
-      blocks.push({ type: level, content: trimmed.replace(/^#+\s/, "") });
-      i++;
-      continue;
-    }
-
-    // Blank line → paragraph boundary
-    if (!trimmed) {
-      flushPara();
-      i++;
-      continue;
-    }
-
-    // Bullet list item
-    if (/^[-*•]\s/.test(trimmed)) {
-      flushPara();
-      const items = [];
-      while (i < lines.length && /^[-*•]\s/.test(lines[i].trim())) {
-        items.push(lines[i].trim().replace(/^[-*•]\s/, ""));
-        i++;
-      }
-      blocks.push({ type: "ul", items });
-      continue;
-    }
-
-    // Numbered list item
-    if (/^\d+[.)]\s/.test(trimmed)) {
-      flushPara();
-      const items = [];
-      while (i < lines.length && /^\d+[.)]\s/.test(lines[i].trim())) {
-        items.push(lines[i].trim().replace(/^\d+[.)]\s/, ""));
-        i++;
-      }
-      blocks.push({ type: "ol", items });
-      continue;
-    }
-
-    // Heuristic: short line without ending punctuation = heading
-    if (
-      trimmed.length > 0 &&
-      trimmed.length <= 80 &&
-      !/[.!?,;:]$/.test(trimmed) &&
-      !lines[i + 1]?.trim()  // followed by blank line
-    ) {
-      flushPara();
-      blocks.push({ type: "h2", content: trimmed });
-      i++;
-      continue;
-    }
-
-    para.push(line);
-    i++;
-  }
-  flushPara();
-  return blocks;
-}
-
-// Renders a single text block as HTML. Marks (already HTML) are embedded as-is.
-function blockToHtml(block) {
-  switch (block.type) {
-    case "h1":
-      return `<h2 class="hl-h1">${block.content}</h2>`;
-    case "h2":
-      return `<h3 class="hl-h2">${block.content}</h3>`;
-    case "ul":
-      return `<ul class="hl-ul">${block.items.map((it) => `<li>${it}</li>`).join("")}</ul>`;
-    case "ol":
-      return `<ol class="hl-ol">${block.items.map((it) => `<li>${it}</li>`).join("")}</ol>`;
-    default:
-      return `<p class="hl-p">${block.content.replace(/\n/g, "<br>")}</p>`;
-  }
-}
-
-// Builds highlighted HTML: inserts <mark> tags then formats into pretty blocks.
+// Builds highlighted HTML: inserts <mark> tags then formats into rich blocks.
 function renderHighlighted(text, findings) {
   const indexed = findings
     .map((f, i) => ({ f, i }))
@@ -208,8 +102,6 @@ function renderHighlighted(text, findings) {
       lastEnd = x.f.end;
     }
   }
-
-  // Build flat string with <mark> tags (HTML-safe outside marks).
   let flat = "";
   let cur = 0;
   for (const { f, i } of chosen) {
@@ -220,27 +112,21 @@ function renderHighlighted(text, findings) {
     cur = f.end;
   }
   flat += escapeHtml(text.slice(cur));
-
-  // Split flat HTML on newlines while preserving <mark> tags intact.
-  // Strategy: split raw text into blocks first (preserving char positions),
-  // then re-insert marks per block.
   return formatRichHtml(flat);
 }
 
-// Takes HTML string (with <mark> tags) and formats it into rich block HTML.
+// Formats HTML string (with embedded <mark> tags) into rich block structure.
 function formatRichHtml(html) {
-  // Split on blank lines (two or more newlines), keeping marks intact.
   const rawBlocks = html.split(/\n[ \t]*\n+/);
   const parts = [];
 
   for (const block of rawBlocks) {
     if (!block.trim()) continue;
-    const plain = block.replace(/<[^>]+>/g, "").trim();
     const lines = block.split("\n");
-    const firstLine = lines[0].replace(/<[^>]+>/g, "").trim();
+    const firstPlain = lines[0].replace(/<[^>]+>/g, "").trim();
 
     // Bullet list
-    if (/^[-*•]\s/.test(firstLine)) {
+    if (/^[-*•]\s/.test(firstPlain)) {
       const liItems = lines
         .filter((l) => l.replace(/<[^>]+>/g, "").trim())
         .map((l) => `<li>${l.replace(/^[-*•]\s/, "")}</li>`);
@@ -249,7 +135,7 @@ function formatRichHtml(html) {
     }
 
     // Numbered list
-    if (/^\d+[.)]\s/.test(firstLine)) {
+    if (/^\d+[.)]\s/.test(firstPlain)) {
       const liItems = lines
         .filter((l) => l.replace(/<[^>]+>/g, "").trim())
         .map((l) => `<li>${l.replace(/^\d+[.)]\s/, "")}</li>`);
@@ -258,31 +144,25 @@ function formatRichHtml(html) {
     }
 
     // Markdown heading
-    if (/^#{1,2}\s/.test(firstLine)) {
-      const level = firstLine.startsWith("## ") ? "hl-h2" : "hl-h1";
+    if (/^#{1,2}\s/.test(firstPlain)) {
+      const level = firstPlain.startsWith("## ") ? "hl-h2" : "hl-h1";
       const inner = block.replace(/^#+\s/, "");
       parts.push(`<h3 class="${level}">${inner}</h3>`);
       continue;
     }
 
-    // Heuristic heading: single short line, no trailing punctuation
+    // Heuristic heading: single short line without trailing punctuation
+    const plainAll = block.replace(/<[^>]+>/g, "").trim();
     const isSingleLine = lines.filter((l) => l.replace(/<[^>]+>/g, "").trim()).length === 1;
-    if (isSingleLine && plain.length > 0 && plain.length <= 80 && !/[.!?,;:]$/.test(plain)) {
+    if (isSingleLine && plainAll.length > 0 && plainAll.length <= 80 && !/[.!?,;:]$/.test(plainAll)) {
       parts.push(`<h3 class="hl-h2">${block.trim()}</h3>`);
       continue;
     }
 
-    // Regular paragraph
-    const inner = block.replace(/\n/g, "<br>");
-    parts.push(`<p class="hl-p">${inner}</p>`);
+    parts.push(`<p class="hl-p">${block.replace(/\n/g, "<br>")}</p>`);
   }
 
   return parts.join("") || `<p class="hl-p">${html.replace(/\n/g, "<br>")}</p>`;
-}
-
-// Legacy: still called from renderScores path (no findings, just formatting).
-function formatParagraphs(html) {
-  return formatRichHtml(html);
 }
 
 function renderDimensions(dimensions) {
@@ -372,6 +252,16 @@ function renderLlmError(err) {
 function renderScores(r) {
   renderVerdict(r);
 
+  // Compact bar: colored numbers
+  const slopNum = $("bar-num-slop");
+  slopNum.textContent = r.slop.score.toFixed(0);
+  slopNum.style.color = colorFor(r.slop.score).trim();
+
+  const aiNum = $("bar-num-ai");
+  aiNum.textContent = r.ai_provenance.score.toFixed(0);
+  aiNum.style.color = colorFor(r.ai_provenance.score).trim();
+
+  // Full gauges in expand section
   $("gauge-slop").innerHTML = gauge(r.slop.score);
   $("band-slop").textContent = bandSlop(r.slop.score);
   $("conf-slop").textContent = `pewność: ${(r.slop.confidence * 100).toFixed(0)}%`;
@@ -381,9 +271,6 @@ function renderScores(r) {
   $("band-ai").textContent = bandAi(r.ai_provenance.score);
   $("conf-ai").textContent = `pewność: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
   $("break-ai").innerHTML = breakdownHtml(r.ai_provenance.breakdown);
-
-  $("bar-gauge-slop").innerHTML = gaugeSmall(r.slop.score);
-  $("bar-gauge-ai").innerHTML = gaugeSmall(r.ai_provenance.score);
 }
 
 function renderReport(r) {
@@ -408,7 +295,10 @@ function renderReport(r) {
   $("highlighted").innerHTML = renderHighlighted(CURRENT.text, CURRENT.findings);
   renderFindings(CURRENT.findings);
 
+  // Show results row and proposals panel, hide empty state
   $("abar-results").classList.remove("hidden");
+  $("proposals-empty").classList.add("hidden");
+  $("proposals-panel").classList.remove("hidden");
   updateNav();
 
   if (CURRENT.findings.length > 0 && !CURRENT.findings[0].proposals) {
@@ -674,24 +564,19 @@ async function loadModels() {
     const resp = await fetch("/api/models");
     if (!resp.ok) return;
     const data = await resp.json();
-    const box = $("model");
+    const sel = $("model-select");
     const models = data.models || [];
     const ids = models.map((m) => m.id);
     const saved = localStorage.getItem("detektor_model");
     const active = ids.includes(saved) ? saved : (ids.includes(data.default) ? data.default : ids[0]);
-    box.innerHTML = models
+    sel.innerHTML = models
       .map((m) => {
-        const checked = m.id === active ? " checked" : "";
-        return `<label class="model-radio">
-          <input type="radio" name="model" value="${escapeHtml(m.id)}"${checked} />
-          <span class="mr-dot"></span>
-          <span class="mr-label">${escapeHtml(m.label)}</span>
-        </label>`;
+        const selected = m.id === active ? " selected" : "";
+        return `<option value="${escapeHtml(m.id)}"${selected}>${escapeHtml(m.label)}</option>`;
       })
       .join("");
-    box.addEventListener("change", (e) => {
-      const r = e.target.closest('input[name="model"]');
-      if (r) localStorage.setItem("detektor_model", r.value);
+    sel.addEventListener("change", () => {
+      localStorage.setItem("detektor_model", sel.value);
     });
   } catch (e) {
     // No model list — analysis uses server default.
@@ -715,7 +600,7 @@ $("bar-details-toggle").addEventListener("click", () => {
   const isOpen = !expand.classList.contains("hidden");
   expand.classList.toggle("hidden", isOpen);
   btn.setAttribute("aria-expanded", String(!isOpen));
-  btn.textContent = isOpen ? "Oceny i wymiary ▾" : "Oceny i wymiary ▴";
+  btn.textContent = isOpen ? "Szczegóły ▾" : "Szczegóły ▴";
 });
 
 $("highlighted").addEventListener("click", (e) => {
@@ -771,7 +656,7 @@ $("nav-apply").addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
   if (CURRENT.findings.length === 0) return;
   if (e.key === "ArrowLeft") { e.preventDefault(); navigateTo(ACTIVE_IDX - 1); }
   else if (e.key === "ArrowRight") { e.preventDefault(); navigateTo(ACTIVE_IDX + 1); }
