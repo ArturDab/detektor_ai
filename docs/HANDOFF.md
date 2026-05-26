@@ -1,62 +1,65 @@
-# HANDOFF — sesja UI dwukolumnowe + jedno okno tekstu + migracja na `main`
+# HANDOFF — sesja: profesjonalna szata graficzna wg UI kit z Figmy
 
-Stan na koniec sesji. Fakty oparte na kodzie, git, testach i Railway MCP.
-Założenia oznaczone jako ZAŁOŻENIE.
+Stan na koniec sesji. Fakty oparte na kodzie, git i testach. Założenia oznaczone jako ZAŁOŻENIE.
 
-## Gdzie jest kod (źródło prawdy)
-- **Gałąź integracyjna: `main`**, HEAD **`7372d19`** (#12). PR-y celują w `main` (squash-merge).
-- **Gałąź auto-deployu Railway: `claude/ai-slop-detection-tool-ye7nw`** = `7372d19` (fast-forward do `main`). Railway **wciąż** śledzi tę gałąź, nie `main`.
-- Produkcja: deploy #12 **SUCCESS** (commit `7372d19`) — fix loadera jest live.
-- Lokalne working tree: czyste; lokalny branch `claude/sweet-hawking-ujT6S` zresetowany na `origin/main`.
-- **Przestarzałe (nie używać jako bazy):** `claude/railway-deployment-completion-iCbZt`.
+## 0. Cel tej (kolejnej) sesji — PRIORYTET
+**Opracować profesjonalną szatę graficzną detektora**, opartą o UI kit z Figmy:
+- Plik: <https://www.figma.com/design/tSeivvg2HNlSvpYzvPk5y5/3-Free-Text-Editor-App-UI-Kit--Community-?node-id=6468-23222>
+- Community: <https://www.figma.com/community/file/1393893644332354159/3-free-text-editor-app-ui-kit>
+- Konkretny frame/node: **`6468-23222`** (zacznij od niego).
 
-## Co zmieniono w tej sesji (wszystko zmergowane do `main`)
-1. **#10** Układ dwukolumnowy (lewa: tekst z podświetleniami; prawa: werdykt+wskaźniki+propozycje). Live przeliczanie ocen heurystycznie po edycji: backend `analyze_text(use_llm=...)` + `AnalyzeRequest.judge` (`/api/analyze {"judge": false}`); front `renderScores`/`refreshScores`. Przycisk „Kopiuj cały tekst". Stały slot podglądu (koniec „skakania" w liście propozycji).
-2. **#11** Jedno okno tekstu w lewej kolumnie: textarea → nakładka ze spinnerem (`setLeftMode`) → podświetlony tekst z propozycjami; przycisk „Edytuj / wklej nowy". „Analizuj"+model+opcje na górze prawej kolumny; oceny ukryte do pierwszej analizy. Stały slot podglądu również w popoverze. Usunięto osobne okno wsadu i nieużywane CSS (`.input-pane/.controls/.actions`). Dodano zasadę auto-merge w `CLAUDE.md §0`.
-3. **#12** Fix krytyczny: `.text-loader`/`.legend` (display:flex) były w CSS po `.hidden`(display:none) i przy równej specyficzności wygrywały → loader i legenda zasłaniały pole tekstu od startu. Naprawione: `.hidden { display: none !important; }`.
-4. Utworzono gałąź `main` (z `claude/ai-slop-detection-tool-ye7nw`); PR-y #10–#12 zmergowane do `main`.
+Zakres: redesign **wyłącznie warstwy wizualnej** (CSS + ewentualnie drobny markup/klasy) bez zmiany logiki analizy, endpointów, offsetów ani zachowania UI. Układ dwukolumnowy i wszystkie funkcje (jedno okno tekstu, popover propozycji, live oceny, kopiowanie, humanizacja) MUSZĄ działać jak dotąd.
 
-## Co działa (potwierdzone)
-- 32/32 testów, ruff czysto, `node --check app.js` OK.
-- Tryb heurystyczny (bez klucza): `/healthz`, `/api/models` (źródło `static`), `/api/analyze` (z `judge:true/false`), `/api/rewrite`, `/api/humanize` — graceful.
-- `/api/analyze {"judge": false}` zwraca oceny heurystyczne, `llm_error=null` (zweryfikowane curl-em lokalnie).
-- Deploy #12 SUCCESS; aplikacja wstała (logi: `Uvicorn running on 0.0.0.0:8080`).
+## 1. KLUCZOWY blocker do sprawdzenia NA START
+W poprzedniej sesji **nie było dostępu do Figmy** z kontenera. Użytkownik twierdzi, że właśnie dodał connector/MCP do Figmy — **najpierw to zweryfikuj**:
+1. `ToolSearch` z query `figma` — czy są narzędzia `mcp__*figma*`?
+2. Sprawdź OAuth: `cat ~/.claude/.credentials.json | python3 -c "import sys,json;print(list(json.load(sys.stdin).get('mcpOAuth',{}).keys()))"` — czy doszedł nowy provider?
+3. Jeśli MCP wymaga auth → użyj `...__authenticate`, podaj użytkownikowi URL, potem `...__complete_authentication`.
+4. Dopiero gdy masz dostęp: pobierz z node `6468-23222` **tokeny**: paleta kolorów (hex), typografia (font family/wagi/rozmiary), border-radius, cienie, spacing/grid, style komponentów (przyciski, inputy, karty, chipy).
 
-## Co jeszcze nie działa / niepewne
-- **Render nowego UI niezweryfikowany** — w środowisku brak Chromium/Playwright; sprawdzić wizualnie na produkcji (jedno okno, spinner tylko na czas analizy, prawa kolumna, live oceny, kopiowanie, popover bez „skakania").
-- **Źródło deployu Railway = wciąż `claude/ai-slop-detection-tool-ye7nw`**, nie `main` (agent MCP rate-limited — nie dało się przełączyć z kontenera).
-- **LLM na Flashu end-to-end** — nadal niepotwierdzone przez użytkownika (judge + humanizacja).
+**Co NIE działa z tego środowiska (sprawdzone w tej sesji):**
+- `figma.com` i `api.figma.com` → **Host not in allowlist** (sieć sandboxa blokuje; allowlist: GitHub, npm, Google Fonts, api.anthropic.com). WebFetch → 403.
+- Brak `FIGMA_TOKEN` w env. Brak Figma MCP. OAuth providers w tej sesji: tylko `wordpress`(d0d1de58), `asana`(d259b6d5), `github`.
+- ⇒ Jeśli connector Figmy nadal nie działa: poproś użytkownika o **screenshoty** framów (wkleja jako obraz w czacie) albo **export tokenów** (Figma Inspect / plugin Variables→JSON). Nie zgaduj wyglądu kitu.
 
-## Rekomendowane następne zadanie (dokładnie)
-1. **Przełącz źródło deployu Railway na `main`**: panel Railway → projekt `detektor_ai` → service `web` → Settings → Source → Branch = `main`, zapisz i zdeployuj. (Albo Railway MCP `railway-agent`, gdy nie rate-limited: projectId `dc230d9e-ba34-44d2-8793-baa7ddae9924`, env `533baa05-7e6b-46c8-b942-d5c3c3f2bb40`, service `24b213f8-0457-4d60-a393-28eb4bd58102`.)
-2. Po przełączeniu: zweryfikuj, że push do `main` sam wyzwala deploy (`list-deployments` → branch `main`).
-3. Poproś użytkownika o test produkcji i potwierdź wizualnie nowy UI.
-4. Potwierdź LLM Flash w logach (`get-logs`, brak `Gemini:`/`Gemini rewrite`); rozważ ustawienie env `GEMINI_MODEL` na Flash.
+## 2. Stan kodu (źródło prawdy)
+- Gałąź integracyjna **`main`**, HEAD **`772915d`** (#18). Railway auto-deployuje z `main` (trigger ON, Wait for CI OFF).
+- Dev-branch tej linii prac: **`claude/sweet-bardeen-5TAH9`** = `origin/main` (zsynchronizowany, czysty).
+- Testy: **34 passed**; ruff czysto; `node --check app.js` OK.
+- Ostatnie scalone PR-y: #16 (humanizacja: interpunkcja/retry/regeneracja), #17 (kropka w propozycjach na końcu zdania), #18 (popover nie wychodzi poza viewport: `position: fixed` + przycinanie do viewportu).
 
-## Pliki najprawdopodobniej istotne w kolejnej sesji
-- Front: `src/detektor_web/templates/index.html`, `src/detektor_web/static/app.js` (`setLeftMode`, `refreshScores`, `copyAll`, `PREVIEW_HINT`), `src/detektor_web/static/style.css` (`.hidden !important`, `.text-box/.text-loader`, `.two-col`, `.pop-preview`).
-- Backend: `src/detektor_web/app.py` (`AnalyzeRequest.judge`), `src/detektor/pipeline.py` (`analyze_text(use_llm=...)`).
-- LLM/humanizacja: `src/detektor/llm/{gemini_judge,rewriter,discovery}.py`, `src/detektor/humanize.py`, `src/detektor/config.py`.
+## 3. Powierzchnia designu do zmiany (gdzie są style)
+- **`src/detektor_web/static/style.css`** — całość wyglądu. Tokeny w `:root` (obecnie light theme):
+  - `--bg #fafafa`, `--card #fff`, `--text #171717`, `--muted #6b7280`, `--border #eaeaea`, `--accent #171717` (czarny), severity: `--green/yellow/orange/red`, `--radius 12px`, `--shadow`, `--font-sans "Geist"`, `--font-mono "Geist Mono"`.
+  - Sekcje: `.topbar`, `.layout/.two-col/.col-left/.col-right`, `.panel/.card`, `.text-pane/.text-box/.highlighted/.text-loader`, `.controls-card`, `.results/.results-bar`, `.verdict`, `.scores/.score-card/.gauge-wrap`, `.findings/.finding`, `.popover/.pop-*`, `.chip.sev-*`.
+- **`src/detektor_web/templates/index.html`** — markup + ładowanie fontu (Google Fonts: Geist/Geist Mono, linie 7–13). Jeśli kit używa innego fontu → podmień `<link>` i `--font-sans`.
+- **`src/detektor_web/static/app.js`** — logika; **nie zmieniać** offsetów/`setLeftMode`/`refreshScores`/`positionPopover`. Jeśli redesign wymaga nowych klas/elementów, dodawaj ostrożnie.
 
-## Komendy uruchomione w tej sesji i wyniki
-- `.venv/bin/pytest -q` → **32 passed**. `.venv/bin/ruff check src tests` → **czysto**.
-- `node --check src/detektor_web/static/app.js` → **OK**.
-- Smoke: `uvicorn` + `curl /healthz` → `{"status":"ok","llm_available":false,"model":"gemini-3.1-pro-preview"}`; `/api/analyze {"judge":false}` → oceny heurystyczne, `llm_error:null`.
-- Git: PR #10, #11, #12 → squash-merge do `main`; deploy przez fast-forward `claude/ai-slop-detection-tool-ye7nw` → `main`.
-- Railway MCP `list-deployments`/`get-status`/`get-logs` → deploye #10/#11/#12 zbudowane, ostatni (#12) **SUCCESS**.
-- Railway MCP `railway-agent` (zmiana gałęzi źródłowej) → **rate-limited** (nie wykonano).
+## 4. Twarde ograniczenia (z CLAUDE.md)
+- **Aplikacja po polsku.** Wszystkie teksty UI PL.
+- **`.hidden { display: none !important; }`** MUSI zostać (inne reguły ustawiają `display` i nadpisałyby je — był bug: loader/legenda zasłaniały pole).
+- **Render lokalnie niemożliwy** (brak Chromium/Playwright) — zmiany wizualne weryfikuje się **dopiero na produkcji po deployu**. Powiedz to użytkownikowi wprost.
+- Deploy = **squash-merge PR do `main`** → Railway auto-build. Na PR-ach włączaj auto-merge (squash); brak CI ⇒ w praktyce scalaj ręcznie `merge_pull_request`. Każdą odpowiedź kończ linkiem do produkcji.
+- Strefy ostrożności: nie ruszać regexów/kluczy w `heuristics/*.py` i `data/*.yaml`; nie psuć logiki offsetów (`fusion._locate`, `humanize`, `app.js applyReplacement`); nie zmieniać `llm/schema.py`.
 
-## Komendy, które kolejna sesja powinna uruchomić
+## 5. Rekomendowane kroki kolejnej sesji (po kolei)
+1. Zweryfikuj dostęp do Figmy (sekcja 1). Jeśli brak → poproś o screenshoty/tokeny i wstrzymaj redesign do ich otrzymania.
+2. Wyciągnij tokeny z node `6468-23222`; zmapuj je na `:root` w `style.css` (kolory, font, radius, shadow, spacing).
+3. Zaktualizuj `index.html` (font `<link>` jeśli inny) i przeprojektuj komponenty w `style.css` zgodnie z kitem — zachowując strukturę DOM i klasy.
+4. Sanity: `node --check app.js`, `ruff format/check`, `pytest -q` (powinno zostać 34 — design nie dotyka backendu).
+5. Nowy branch oparty na `origin/main`, PR → `main`, scal (squash). Poproś użytkownika o wizualną weryfikację na produkcji (golden path: wklej tekst → Analizuj → podświetlenia → popover → Humanizuj → Kopiuj).
+
+## 6. Komendy
 ```bash
-python -m venv .venv && .venv/bin/pip install -e ".[dev]"   # jeśli brak środowiska
 .venv/bin/pytest -q
-.venv/bin/ruff check src tests
-PYTHONPATH=src .venv/bin/uvicorn detektor_web.app:app --reload   # smoke /healthz, /api/analyze
+.venv/bin/ruff check src tests && .venv/bin/ruff format src
+node --check src/detektor_web/static/app.js
+PYTHONPATH=src .venv/bin/uvicorn detektor_web.app:app --reload   # smoke /healthz
+git checkout -B <nowy-dev-branch> origin/main
+# deploy: PR -> main (squash). Railway MCP: get-status / get-logs / list-deployments.
 ```
-Na produkcji: po przełączeniu źródła na `main` — Railway MCP `get-status`/`get-logs`.
 
-## Otwarte pytania / niepewności
-- Czy użytkownik przełączył już źródło Railway na `main` w panelu? (Na koniec sesji: NIE — wciąż stara gałąź.)
-- Czy `GEMINI_API_KEY` i jaki `GEMINI_MODEL` są ustawione na produkcji? ZAŁOŻENIE: klucz ustawiony; domyślny model `gemini-3.1-pro-preview` (użytkownik wybierał Flash per-żądanie w UI).
-- Czy nowy UI renderuje się poprawnie na produkcji (układ, spinner, sticky prawa kolumna na różnych szerokościach)? Do potwierdzenia.
-- Czy judge/humanizacja działają stabilnie na Flashu end-to-end?
+## 7. Otwarte pytania
+- Czy connector Figmy działa już z kontenera? (Koniec tej sesji: NIE potwierdzono — czekamy na nową konwersację.)
+- Który z 3 wariantów w „3 Free Text Editor App UI Kit" jest docelowy? (Node `6468-23222` to punkt startowy — potwierdź z użytkownikiem, czy to właściwy wariant.)
+- Dark mode czy light? (Obecnie light. Kit może być dark — ustalić po podejrzeniu designu.)
