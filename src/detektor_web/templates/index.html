@@ -55,9 +55,10 @@
       <div class="col-right">
         <div class="controls-card card">
           <button id="analyze">Analizuj</button>
-          <label class="model-pick">Model LLM
-            <select id="model"></select>
-          </label>
+          <div class="model-pick">
+            <span class="field-label">Model LLM</span>
+            <div id="model" class="model-radios"></div>
+          </div>
           <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
             <input type="checkbox" id="with-humanize" /> Z propozycjami humanizacji
           </label>

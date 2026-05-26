@@ -21,8 +21,8 @@ function escapeHtml(s) {
 }
 
 function selectedModel() {
-  const sel = $("model");
-  return sel && sel.value ? sel.value : undefined;
+  const r = document.querySelector('input[name="model"]:checked');
+  return r && r.value ? r.value : undefined;
 }
 
 function colorFor(score) {
@@ -109,7 +109,24 @@ function renderHighlighted(text, findings) {
     cur = f.end;
   }
   out += escapeHtml(text.slice(cur));
-  return out.replace(/\n/g, "<br>");
+  return formatParagraphs(out);
+}
+
+// Dzieli zaznaczony HTML na akapity (po pustych liniach), wykrywa krotkie linie
+// bez konczacej interpunkcji jako naglowki. Marki (<mark>) zostaja nietkniete.
+function formatParagraphs(html) {
+  const blocks = html.split(/\n[ \t]*\n+/);
+  const parts = [];
+  for (const block of blocks) {
+    if (!block.trim()) continue;
+    const plain = block.replace(/<[^>]+>/g, "").trim();
+    const oneLine = !block.includes("\n");
+    const isHeading =
+      oneLine && plain.length > 0 && plain.length <= 70 && !/[.!?,;:]$/.test(plain);
+    const inner = block.replace(/\n/g, "<br>");
+    parts.push(`<p class="hl-p${isHeading ? " hl-heading" : ""}">${inner}</p>`);
+  }
+  return parts.join("") || `<p class="hl-p">${html.replace(/\n/g, "<br>")}</p>`;
 }
 
 function renderDimensions(dimensions) {
@@ -155,10 +172,13 @@ function renderFindings(findings) {
         action = `<button class="show-props" data-idx="${i}">Propozycje zmiany</button>`;
       }
       return `<li class="finding sev-${f.severity}">
-        <div class="quote">${txt}</div>
-        <div>${escapeHtml(f.message)}</div>
+        <div class="finding-head">
+          <span class="chip sev-${f.severity}">${SEV_LABEL[f.severity] || f.severity}</span>
+          <span class="finding-analyzer">${escapeHtml(f.analyzer)}</span>
+        </div>
+        ${txt ? `<div class="quote">${txt}</div>` : ""}
+        <div class="finding-msg">${escapeHtml(f.message)}</div>
         ${sug}
-        <div class="src">${escapeHtml(f.analyzer)} &middot; ${SEV_LABEL[f.severity] || f.severity}</div>
         ${action}
       </li>`;
     })
@@ -490,7 +510,9 @@ async function humanizeAll() {
 
 // Tryby lewego okna: edycja (textarea), ladowanie (spinner), podglad (podswietlenia).
 function setLeftMode(mode) {
-  $("text").classList.toggle("hidden", mode !== "edit");
+  // Textarea widoczna w trybie edycji ORAZ ladowania (blado w tle pod loaderem).
+  $("text").classList.toggle("hidden", mode === "view");
+  $("text").classList.toggle("dimmed", mode === "loading");
   $("text-loader").classList.toggle("hidden", mode !== "loading");
   $("highlighted").classList.toggle("hidden", mode !== "view");
   $("legend").classList.toggle("hidden", mode !== "view");
@@ -538,15 +560,25 @@ async function loadModels() {
     const resp = await fetch("/api/models");
     if (!resp.ok) return;
     const data = await resp.json();
-    const sel = $("model");
-    sel.innerHTML = (data.models || [])
-      .map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.label)}</option>`)
-      .join("");
+    const box = $("model");
+    const models = data.models || [];
+    const ids = models.map((m) => m.id);
     const saved = localStorage.getItem("detektor_model");
-    const ids = (data.models || []).map((m) => m.id);
-    sel.value = ids.includes(saved) ? saved : data.default;
-    if (!sel.value && ids.length) sel.value = ids[0];
-    sel.addEventListener("change", () => localStorage.setItem("detektor_model", sel.value));
+    const active = ids.includes(saved) ? saved : (ids.includes(data.default) ? data.default : ids[0]);
+    box.innerHTML = models
+      .map((m) => {
+        const checked = m.id === active ? " checked" : "";
+        return `<label class="model-radio">
+          <input type="radio" name="model" value="${escapeHtml(m.id)}"${checked} />
+          <span class="mr-dot"></span>
+          <span class="mr-label">${escapeHtml(m.label)}</span>
+        </label>`;
+      })
+      .join("");
+    box.addEventListener("change", (e) => {
+      const r = e.target.closest('input[name="model"]');
+      if (r) localStorage.setItem("detektor_model", r.value);
+    });
   } catch (e) {
     // Brak listy modeli - analiza pojdzie modelem domyslnym z serwera.
   }
