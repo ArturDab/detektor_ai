@@ -2,7 +2,7 @@
 
 ## Wdrożenie: natywna integracja GitHub↔Railway (nie CLI/MCP do uploadu)
 - **Powód:** sieć kontenera Claude Code blokuje hosty Railway („Host not in allowlist"), więc `railway up` z sandboxa nie działa; Railway MCP OAuth bywa niedostępny.
-- **Rozwiązanie:** repo `arturdab/detektor_ai` podłączone do Railway; **push/merge na gałąź `claude/ai-slop-detection-tool-ye7nw`** wyzwala auto-build (serwer↔serwer, niezależnie od sandboxa).
+- **Rozwiązanie:** repo `arturdab/detektor_ai` podłączone do Railway; **merge PR do gałęzi `main`** wyzwala auto-build (serwer↔serwer, niezależnie od sandboxa).
 - **Diagnostyka/operacje na Railway:** przez Railway MCP (`railway-agent`, `get-status`, `get-logs`), bo wywołania idą przez api.anthropic.com.
 
 ## Workflow gałęzi: `main` jako gałąź integracyjna (od sesji UI)
@@ -19,14 +19,18 @@
   ```
 - **Nie używać** `claude/railway-deployment-completion-iCbZt` jako bazy (przestarzała).
 
-## Deploy: fast-forward gałęzi śledzonej przez Railway do `main`
-- **Stan:** Railway nadal auto-deployuje z `claude/ai-slop-detection-tool-ye7nw` (źródła w panelu nie przełączono na `main` — agent MCP był rate-limited).
-- **Mechanizm deployu (do czasu migracji):** po merge do `main` wypchnij `main` na gałąź śledzoną (fast-forward), co wyzwala auto-build:
-  ```bash
-  git fetch origin main
-  git push origin origin/main:refs/heads/claude/ai-slop-detection-tool-ye7nw
-  ```
-- **TODO:** przełączyć źródło Railway na `main` (panel: service `web` → Settings → Source → Branch), wtedy push do `main` deployuje wprost.
+## Deploy: Railway auto-deployuje wprost z `main` (ZMIGROWANE)
+- **Stan aktualny:** źródło Railway przełączone na gałąź `main`. Merge PR do `main` (squash) → auto-build Nixpacks → deploy. Potwierdzone: deploye #28/#29/#30 mają w `meta.branch` = `main` i kończą się SUCCESS.
+- **Mechanizm fast-forward na starą gałąź już NIE jest potrzebny** (był obejściem, gdy źródłem była `claude/ai-slop-detection-tool-ye7nw`).
+- „Wait for CI" w panelu MUSI być OFF (brak CI w repo).
+- Zmiana gałęzi-triggera możliwa tylko z panelu Railway UI (nie z MCP).
+
+## UI v5: rezygnacja z `display:contents` i popovera (ZASTĘPUJE wcześniejszy unified panel)
+- **Decyzja:** redesign v5 (PR #27/#28) porzucił „unified panel" oparty na `.results { display: contents }` oraz pływający `.popover`. Zamiast tego: jawna pozioma sticky belka analizy (`#analysis-bar`, 2 rzędy) + prawa kolumna z inline'owymi propozycjami (`#proposals-panel`) i empty-state.
+- **`--abar-h`** (token `:root`) aktualizowane przez `ResizeObserver` → poprawny `top`/`max-height` sticky `.col-right` niezależnie od wysokości belki.
+- **`#finding-nav` przez `style.display`** (inline z JS w `updateNav`), nie przez klasę `.hidden` — eliminuje problemy ze specyficznością CSS, które powodowały, że pasek nawigacji się nie pokazywał.
+- **`<select>` modeli** zamiast radiobuttonów (kompaktowość). Kolorowe liczby Slop/AI w belce; pełne gauge SVG tylko w sekcji rozwijanej (brak duplikacji).
+- **`formatRichHtml`** analizuje tekst linia-po-linii (tekst wklejany z przeglądarki ma pojedyncze `\n`, nie `\n\n`); nagłówki wykrywane heurystyką z listą polskich słów-łączników.
 
 ## Live przeliczanie ocen (tryb heurystyczny bez LLM)
 - **Decyzja:** po zastosowaniu propozycji oceny przeliczane natychmiast w trybie heurystycznym, pełna ocena LLM dopiero na żądanie („Analizuj").
