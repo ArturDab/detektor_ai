@@ -116,62 +116,65 @@ function renderHighlighted(text, findings) {
 }
 
 // Formats HTML string (with embedded <mark> tags) into rich block structure.
-// Handles both single-\n and double-\n paragraph separators.
+// Handles single-\n text (no blank lines between headings and paragraphs).
 function formatRichHtml(html) {
-  // Split into lines, group by blank lines into blocks
   const lines = html.split("\n");
-  const blocks = [];
-  let cur = [];
-  for (const line of lines) {
-    if (!line.replace(/<[^>]+>/g, "").trim()) {
-      if (cur.length) { blocks.push(cur); cur = []; }
-    } else {
-      cur.push(line);
-    }
-  }
-  if (cur.length) blocks.push(cur);
-  if (!blocks.length) return `<p class="hl-p">${html}</p>`;
-
   const parts = [];
-  for (const block of blocks) {
-    const firstPlain = block[0].replace(/<[^>]+>/g, "").trim();
+  let paraBuf = [];
+
+  // Polish continuation-word prefixes that mean this line continues a sentence
+  const CONT = /^(i |a |ale |oraz |jednak |więc |dlatego |ponieważ |który |które |która |to |że |bo |lecz |czy |kiedy |gdy |po |na |w |z |do |się )/i;
+
+  function flush() {
+    if (!paraBuf.length) return;
+    parts.push(`<p class="hl-p">${paraBuf.join("<br>")}</p>`);
+    paraBuf = [];
+  }
+
+  // Returns true when the paragraph buffer "ended a sentence" (block boundary)
+  function atBlockBoundary() {
+    if (!paraBuf.length) return true;
+    const last = paraBuf[paraBuf.length - 1].replace(/<[^>]+>/g, "").trim();
+    return /[.!?…]["»\)]?$/.test(last);
+  }
+
+  for (const line of lines) {
+    const plain = line.replace(/<[^>]+>/g, "").trim();
+    if (!plain) { flush(); continue; }
 
     // Markdown heading
-    if (/^#{1,2}\s/.test(firstPlain)) {
-      const level = firstPlain.startsWith("## ") ? "hl-h2" : "hl-h1";
-      parts.push(`<h3 class="${level}">${block[0].replace(/^#+\s/, "")}</h3>`);
+    if (/^#{1,2}\s/.test(plain)) {
+      flush();
+      const cls = plain.startsWith("## ") ? "hl-h2" : "hl-h1";
+      parts.push(`<h3 class="${cls}">${line.replace(/^#+\s/, "")}</h3>`);
       continue;
     }
 
-    // Bullet list
-    if (/^[-*•]\s/.test(firstPlain)) {
-      const items = block
-        .filter((l) => l.replace(/<[^>]+>/g, "").trim())
-        .map((l) => `<li>${l.replace(/^[-*•]\s/, "")}</li>`);
-      parts.push(`<ul class="hl-ul">${items.join("")}</ul>`);
+    // Bullet / numbered list
+    if (/^[-*•]\s/.test(plain) || /^\d+[.)]\s/.test(plain)) {
+      flush();
+      const isOl = /^\d+[.)]\s/.test(plain);
+      const inner = line.replace(/^[-*•]\s/, "").replace(/^\d+[.)]\s/, "");
+      parts.push(`<${isOl ? "ol" : "ul"} class="${isOl ? "hl-ol" : "hl-ul"}"><li>${inner}</li></${isOl ? "ol" : "ul"}>`);
       continue;
     }
 
-    // Numbered list
-    if (/^\d+[.)]\s/.test(firstPlain)) {
-      const items = block
-        .filter((l) => l.replace(/<[^>]+>/g, "").trim())
-        .map((l) => `<li>${l.replace(/^\d+[.)]\s/, "")}</li>`);
-      parts.push(`<ol class="hl-ol">${items.join("")}</ol>`);
+    // Heuristic heading: short line, no trailing punctuation,
+    // at a block boundary, not a Polish continuation clause
+    if (
+      plain.length > 0 && plain.length <= 72 &&
+      !/[.!?,;:]$/.test(plain) &&
+      atBlockBoundary() &&
+      !CONT.test(plain)
+    ) {
+      flush();
+      parts.push(`<h3 class="hl-h2">${line}</h3>`);
       continue;
     }
 
-    // Single-line heuristic heading: short, no trailing punctuation
-    if (block.length === 1) {
-      const plain = firstPlain;
-      if (plain.length > 0 && plain.length <= 80 && !/[.!?,;:]$/.test(plain)) {
-        parts.push(`<h3 class="hl-h2">${block[0]}</h3>`);
-        continue;
-      }
-    }
-
-    parts.push(`<p class="hl-p">${block.join("<br>")}</p>`);
+    paraBuf.push(line);
   }
+  flush();
 
   return parts.join("") || `<p class="hl-p">${html}</p>`;
 }
@@ -355,11 +358,13 @@ function scrollToMark(idx) {
 
 function updateNav() {
   const total = CURRENT.findings.length;
+  const nav = $("finding-nav");
   if (!total) {
-    $("finding-nav").classList.add("hidden");
+    nav.style.display = "none";
     return;
   }
-  $("finding-nav").classList.remove("hidden");
+  // Force display:flex directly — bypasses any CSS class specificity issues
+  nav.style.display = "flex";
   $("nav-pos").textContent = `${ACTIVE_IDX + 1} / ${total}`;
   $("nav-prev").disabled = ACTIVE_IDX <= 0;
   $("nav-next").disabled = ACTIVE_IDX >= total - 1;
