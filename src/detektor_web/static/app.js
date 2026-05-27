@@ -15,6 +15,12 @@ const CURRENT = { text: "", findings: [] };
 let ACTIVE_IDX = -1;
 let DONE_COUNT = 0;
 
+const EXAMPLE_TEXT = `W dzisiejszych czasach warto zauważyć, że sztuczna inteligencja odgrywa kluczową rolę w niemal każdej dziedzinie naszego życia. Nie ulega wątpliwości, że dynamiczny rozwój technologii niesie ze sobą szereg wyzwań, a jednocześnie otwiera przed nami zupełnie nowe możliwości. Należy podkreślić, że odpowiednie wykorzystanie tych narzędzi może przynieść wymierne korzyści zarówno dużym firmom, jak i zwykłym użytkownikom.
+
+Z drugiej strony, nie sposób pominąć faktu, że wraz z postępem pojawiają się również istotne pytania natury etycznej. Warto pamiętać, że technologia sama w sobie jest neutralna — to wyłącznie od nas zależy, w jaki sposób ją wykorzystamy. Kluczowe znaczenie ma zatem holistyczne podejście, które uwzględnia różnorodne perspektywy oraz potrzeby wszystkich interesariuszy.
+
+Podsumowując, przyszłość rysuje się w jasnych barwach. Musimy jednak nieustannie dostosowywać się do dynamicznie zmieniającej się rzeczywistości, aby w pełni wykorzystać drzemiący w tych rozwiązaniach potencjał.`;
+
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
@@ -518,9 +524,13 @@ async function regenerateProposals(idx, btn) {
 async function copyAll() {
   const text = $("text").value;
   if (!text) return;
+  const btn = $("copy-all");
   try {
     await navigator.clipboard.writeText(text);
     $("humanize-status").textContent = "Skopiowano cały tekst do schowka.";
+    btn.textContent = "Skopiowano ✓";
+    clearTimeout(btn._copyT);
+    btn._copyT = setTimeout(() => { btn.textContent = "Kopiuj tekst"; }, 1800);
   } catch (e) {
     $("text").select();
     $("humanize-status").textContent = "Zaznaczono tekst — skopiuj ręcznie (Ctrl/Cmd+C).";
@@ -538,6 +548,18 @@ function previewHTML(f, proposal) {
   return escapeHtml(ctx.slice(0, i)) + marked + escapeHtml(ctx.slice(i + quote.length));
 }
 
+// Widoczność przycisków „Wklej przykład" / „Wyczyść": tylko w trybie edycji,
+// zależnie od tego, czy pole jest puste. Wołane z setLeftMode i przy wpisywaniu.
+function updateInputButtons() {
+  const ta = $("text");
+  const editing = !ta.classList.contains("hidden");
+  const hasText = ta.value.trim().length > 0;
+  const ex = $("load-example");
+  const cl = $("clear-text");
+  if (ex) ex.classList.toggle("hidden", !(editing && !hasText));
+  if (cl) cl.classList.toggle("hidden", !(editing && hasText));
+}
+
 function setLeftMode(mode) {
   $("text").classList.toggle("hidden", mode === "view");
   $("text").classList.toggle("dimmed", mode === "loading");
@@ -545,6 +567,7 @@ function setLeftMode(mode) {
   $("highlighted").classList.toggle("hidden", mode !== "view");
   $("legend").classList.toggle("hidden", mode !== "view");
   $("edit-text").classList.toggle("hidden", mode !== "view");
+  updateInputButtons();
 }
 
 async function analyze() {
@@ -646,6 +669,23 @@ $("edit-text").addEventListener("click", () => {
   $("text").focus();
 });
 
+$("load-example").addEventListener("click", () => {
+  const ta = $("text");
+  ta.value = EXAMPLE_TEXT;
+  setLeftMode("edit");
+  ta.dispatchEvent(new Event("input"));
+  ta.focus();
+});
+
+$("clear-text").addEventListener("click", () => {
+  const ta = $("text");
+  ta.value = "";
+  setLeftMode("edit");
+  $("status").textContent = "";
+  ta.dispatchEvent(new Event("input"));
+  ta.focus();
+});
+
 $("bar-details-toggle").addEventListener("click", () => {
   const expand = $("analysis-expand");
   const btn = $("bar-details-toggle");
@@ -730,6 +770,7 @@ new ResizeObserver(() => {
   const el = $("word-count");
   if (!ta || !el) return;
   function update() {
+    updateInputButtons();
     const val = ta.value;
     if (!val.trim()) { el.textContent = ""; return; }
     const words = val.trim().split(/\s+/).length;
