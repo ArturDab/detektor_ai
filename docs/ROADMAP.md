@@ -38,24 +38,30 @@ da. **Najpierw plan układu i zachowania, potem implementacja.**
 - [x] Font: **Geist** zostaje, mapowany na skalę typograficzną M3 (decyzja użytk.).
 - [ ] Kolejne etapy (komponenty) — Faza 2.
 
-### Faza 2 — Komponenty
-- [ ] Belka analizy, przyciski, select, checkbox, status → komponenty M3.
-- [ ] Karty propozycji + chipy severity + pasek nawigacji → M3.
-- [ ] Empty-state, gauge/score, sekcja rozwijana → M3.
+### Faza 2 — Komponenty (ZREALIZOWANA, #33)
+- [x] Przyciski → M3: pill-shape (stadium) + state-layery (inset overlay),
+      „Analizuj" filled (FAB-like), Kopiuj/Humanizuj tonal, mini outlined.
+- [x] Nawigacja `← →` → okrągłe icon-buttony; chipy severity pełny radius.
+- [x] Select/checkbox/status — kształt M3 (focus-visible dodany w Fazie 3).
 
-### Faza 3 — Dopracowanie UX i wydajność
-- [ ] Stany (hover/focus/pressed), animacje/motion wg M3, dostępność (focus
-      ring, kontrast, klawiatura).
-- [ ] Płynność: brak migotania przy `renderReport`, szybkie przełączanie
-      trybów, lazy/parallel load propozycji.
+### Faza 3 — Dopracowanie UX i wydajność (W TOKU, #35)
+- [x] Stany + **motion wg M3** (easing/duration, wejścia paneli, „pop" aktywnej
+      marki), **dostępność**: `:focus-visible` (ring) na elementach
+      interaktywnych, `prefers-reduced-motion`.
+- [ ] **Kontrast (WCAG)** — audyt po feedbacku z produkcji (paleta błękitna).
+- [~] Płynność: animacje wejścia tylko dla paneli jednorazowych/toggle;
+      findings świadomie BEZ animacji (re-render przy apply/refresh →
+      anty-migotanie). Reszta (szybkość przełączania, lazy load) po feedbacku.
 
 ### Faza 4 — Weryfikacja
 - [ ] Produkcja (brak Chromium lokalnie) — feedback użytkownika.
 - [ ] Sanity: pytest / ruff / node --check przy każdej zmianie JS/CSS.
 
 ## Decyzje (USTALONE z użytkownikiem)
-1. **Paleta: neutralny monochrom + struktura M3.** Akcent near-black `#171717`
-   (nie Indigo, nie fiolet M3); powierzchnie/elevation/kształt/stany wg M3.
+1. **Paleta: jasny błękit + struktura M3.** (AKTUALIZACJA #34 — wcześniej
+   neutralny monochrom.) Primary `#2563eb` (vivid blue), powierzchnie z
+   błękitnym podtonem, focus-ring/elevation w błękicie; mocniejsze akcenty
+   (Analizuj/Kopiuj/ramki/zaznaczenia/gauge). Struktura M3 jak wcześniej.
 2. **Font: Geist** (zostaje), mapowany na skalę typograficzną M3 (nie Roboto).
 3. **Tryb: tylko jasny** na teraz; tokeny na zmiennych — dark do dodania później.
 4. **Układ: 2 kolumny + sticky belka analizy zostają** (fundament). Bez nav rail.
