@@ -75,7 +75,11 @@ def _with_model(settings: Settings, model: str | None) -> Settings:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
-    return _templates.TemplateResponse(request, "index.html", {"assets": _ASSET_VERSIONS})
+    response = _templates.TemplateResponse(request, "index.html", {"assets": _ASSET_VERSIONS})
+    # Dokument HTML nigdy nie jest cache'owany na sztywno — zawsze rewalidacja,
+    # by każdy deploy był widoczny od razu. Assety (CSS/JS) busti ?v=<hash>.
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 def _speed_hint(model_id: str) -> str:
