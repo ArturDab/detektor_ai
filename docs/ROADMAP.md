@@ -61,24 +61,24 @@ da. **Najpierw plan układu i zachowania, potem implementacja.**
 - [ ] Produkcja (brak Chromium lokalnie) — feedback użytkownika.
 - [ ] Sanity: pytest / ruff / node --check przy każdej zmianie JS/CSS.
 
-### Faza 5 — Dark mode + cache-busting (PRZYGOTOWANA, do realizacji)
-Cel: tryb ciemny M3 (tokeny już są na zmiennych → wystarczy recolor `:root`
-w wariancie ciemnym) oraz koniec ręcznego twardego odświeżania po deployu.
-Każdy etap = osobny PR → `main`; fundamenty (layout, JS, offsety) bez zmian.
-- [ ] **Cache-busting** (najpierw — szybka wygrana): `?v=<mtime|hash>` przy
-      `style.css`/`app.js` w `templates/index.html`; helper w `app.py` liczący
-      sygnaturę pliku statycznego (np. `os.path.getmtime`). Efekt: każdy deploy
-      widoczny natychmiast, bez `Ctrl/Cmd+Shift+R`.
-- [ ] **Dark tokens (M3)**: ciemna rampa — surface ~`#11141b`/container wyżej,
-      on-surface jasny, **primary jaśniejszy błękit** (np. `#8ab4f8`) dla
-      kontrastu na ciemnym; `--accent-soft`/`--on-accent-soft` przeliczone;
-      semantyczne `--green/--yellow/--orange/--red` dostrojone do ciemnego tła.
-- [ ] **Przełącznik motywu**: domyślnie `prefers-color-scheme`, opcjonalny toggle
-      w topbarze (zapis w `localStorage`, atrybut `data-theme` na `<html>`);
-      przycisk z `aria-pressed` + `:focus-visible`.
-- [ ] **Audyt kontrastu AA** dla ciemnej palety (skrypt jak w #36).
+### Faza 5 — Dark mode + cache-busting (ZREALIZOWANA, #37 + #38)
+Fundamenty (layout, JS, offsety) bez zmian; każdy etap = osobny PR → `main`.
+- [x] **Cache-busting** (#37): `?v=<sha1[:8]>` treści pliku przy `style.css`/
+      `app.js` (helper `_asset_version` w `app.py`, wstrzykiwane do szablonu).
+      Każdy deploy widoczny natychmiast, bez `Ctrl/Cmd+Shift+R`.
+- [x] **Dark tokens (M3)** (#38): ciemna rampa w `:root[data-theme="dark"]` —
+      surface `#161c26`/bg `#0e131b`, on-surface jasny, primary `#8ab4f8`,
+      `--accent-soft`/`--on-accent-soft`/semantyczne przeliczone; twarde kolory
+      (marki, chipy, alerty, podgląd, nakładki) nadpisane scoped.
+- [x] **Przełącznik motywu** (#38): inline-skrypt w `<head>` (bez FOUC,
+      `prefers-color-scheme` + `localStorage`), toggle w topbarze
+      (`#theme-toggle`, `aria-pressed`, `:focus-visible`, `color-scheme`).
+- [x] **Audyt kontrastu AA** ciemnej palety (skrypt jak w #36 — wszystkie ≥4.5).
 - [ ] (opcjonalnie) backend/LLM: potwierdzić Gemini Flash end-to-end, rozważyć
       domyślny `GEMINI_MODEL` = Flash.
+
+> Weryfikacja wizualna dark (kontrast policzony, ale render lokalnie niemożliwy
+> — brak Chromium) do potwierdzenia na produkcji po deployu #38.
 
 ## Decyzje (USTALONE z użytkownikiem)
 1. **Paleta: jasny błękit + struktura M3.** (AKTUALIZACJA #34 — wcześniej
