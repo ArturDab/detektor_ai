@@ -909,3 +909,42 @@ mark:hover { filter: brightness(0.93); }
   .model-select { max-width: 100%; }
   .abar-actions { gap: 5px; }
 }
+
+/* ============================================================
+   MATERIAL 3 — FAZA 2: warstwa komponentów
+   Pill-shape (stadium) + state-layery (hover/focus/pressed) wg M3,
+   okrągłe icon-buttony nawigacji, „Analizuj" jako filled M3, tonal
+   buttony. Czysto addytywne override'y kształtu/stanów — struktura,
+   klasy i zachowania v5 (JS, finding-nav, --abar-h) bez zmian.
+   State layer = inset box-shadow (tekst pozostaje nad warstwą).
+   ============================================================ */
+
+/* Filled (primary, near-black): pełne zaokrąglenie + state layer (on-primary) */
+button { border-radius: var(--radius-full, 999px); }
+button:hover { background: var(--accent); box-shadow: var(--shadow-accent), inset 0 0 0 999px rgba(255, 255, 255, 0.10); }
+button:focus-visible { outline: none; box-shadow: var(--shadow-accent), var(--ring); }
+button:active { transform: translateY(1px); box-shadow: var(--shadow-accent), inset 0 0 0 999px rgba(255, 255, 255, 0.16); }
+
+/* Akcja główna „Analizuj" — filled M3 (FAB-like) */
+.abar-controls #analyze { border-radius: 999px; padding: 8px 22px; letter-spacing: -0.01em; }
+
+/* Tonal button (Kopiuj / Humanizuj) — neutralny kontener M3 */
+.btn-secondary { background: var(--accent-soft); color: var(--text); border: 0; border-radius: 999px; padding: 8px 16px; box-shadow: none; }
+.btn-secondary:hover { background: var(--accent-soft); color: var(--text); border: 0; box-shadow: inset 0 0 0 999px rgba(0, 0, 0, 0.05); }
+
+/* Outlined / text button (mini) */
+.btn-mini { background: transparent; color: var(--text-body); border: 1px solid var(--border-strong); border-radius: 999px; padding: 5px 13px; box-shadow: none; }
+.btn-mini:hover { background: var(--accent-soft); color: var(--text); border-color: var(--muted-2); }
+
+/* Icon buttons nawigacji (← →) — okrągłe M3 */
+.nav-btn { width: 36px; height: 36px; padding: 0; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: transparent; box-shadow: none; }
+.nav-btn:hover:not(:disabled) { background: var(--accent-soft); color: var(--text); border-color: var(--muted-2); box-shadow: inset 0 0 0 999px rgba(0, 0, 0, 0.04); }
+
+/* Pozostałe przyciski → pill (spójny kształt M3) */
+.nav-apply { border-radius: 999px; padding: 7px 15px; }
+.nav-apply:hover:not(:disabled) { box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.14); }
+.btn-load-all, .regen-btn, .finding .load-props, .prop-opt { border-radius: 999px; }
+
+/* Chip M3 (pełne zaokrąglenie + oddech) i summary jako pill */
+.chip { padding: 3px 11px; }
+.details summary { border-radius: 999px; }
