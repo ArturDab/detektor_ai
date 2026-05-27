@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -20,9 +21,26 @@ from detektor.models import Report
 from detektor.pipeline import analyze_text
 
 _BASE = Path(__file__).resolve().parent
+_STATIC = _BASE / "static"
+
+
+def _asset_version(filename: str) -> str:
+    """Krótki hash treści pliku statycznego do cache-bustingu (?v=...).
+
+    Liczony raz przy starcie — w produkcji każdy deploy = nowy kontener z
+    nową treścią pliku → nowy hash → przeglądarka pobiera świeżą wersję.
+    """
+    try:
+        data = (_STATIC / filename).read_bytes()
+    except OSError:
+        return "0"
+    return hashlib.sha1(data, usedforsecurity=False).hexdigest()[:8]
+
+
+_ASSET_VERSIONS = {name: _asset_version(name) for name in ("style.css", "app.js")}
 
 app = FastAPI(title="Detektor AI slop", description="Wykrywanie AI slop w tekstach po polsku")
-app.mount("/static", StaticFiles(directory=_BASE / "static"), name="static")
+app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 _templates = Jinja2Templates(directory=str(_BASE / "templates"))
 
 
@@ -57,7 +75,7 @@ def _with_model(settings: Settings, model: str | None) -> Settings:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
-    return _templates.TemplateResponse(request, "index.html")
+    return _templates.TemplateResponse(request, "index.html", {"assets": _ASSET_VERSIONS})
 
 
 def _speed_hint(model_id: str) -> str:
