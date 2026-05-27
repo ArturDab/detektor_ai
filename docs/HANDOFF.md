@@ -1,128 +1,111 @@
-# HANDOFF — sesja: pełny redesign UI + usunięcie jednostronnych obramowań
+# HANDOFF — sesja: redesign v5 (compact bar) + fixy + przygotowanie do redesignu Material 3
 
-Stan na koniec sesji. Fakty oparte na kodzie, git i testach. Założenia oznaczone jako ZAŁOŻENIE.
+Stan na koniec sesji. Fakty oparte na kodzie, git, testach i deployach Railway. Założenia oznaczone jako ZAŁOŻENIE.
 
 ---
 
 ## 1. Co zmieniło się w tej sesji
 
-### PR #21–#24: Pełny redesign UI wg kitu Figmy
-**Kit:** „3 Free Text Editor App UI Kit" (Figma node `6468-23222`, file `tSeivvg2HNlSvpYzvPk5y5`).
+### PR #27 (kontekst wejściowy): pozioma belka + nawigacja + bogaty format
+Scalony przed właściwą pracą tej sesji (`f8163e1`). Przeniósł kontrolki/oceny na poziomą belkę, dodał nawigację fragmentów i wstępny rich-format tekstu. Stanowił bazę, którą ta sesja przebudowała.
 
-#### Pliki zmienione (diff `bd544b6`→`6b74846`):
-- `src/detektor/config.py` — dodano `CURATED_MODEL_IDS: tuple[str, ...]` (kurowana lista 4 modeli Gemini do UI).
-- `src/detektor_web/app.py` — dodano `_is_image_model()`, `_curate()`, `_speed_hint()`, `_annotate()`; endpoint `/api/models` teraz zwraca tylko kurowane modele tekstowe z adnotacją szybkość/dokładność; default wraca do kuratowanej listy jeśli `gemini_model` poza nią.
-- `src/detektor_web/templates/index.html` — picker modeli zmieniony z `<select>` na `<div id="model" class="model-radios">`; dodany `<div class="text-footer"><span id="word-count">`.
-- `src/detektor_web/static/app.js`:
-  - `selectedModel()` czyta zaznaczony radio (`input[name="model"]:checked`).
-  - `loadModels()` renderuje `.model-radio` z radio inputem, kropką `.mr-dot`, etykietą `.mr-label`.
-  - `setLeftMode("loading")` teraz: textarea zostaje (blada, `.dimmed`), nakładka `.text-loader` na wierzchu (mgła + białe badge).
-  - `renderHighlighted()` wywołuje `formatParagraphs(html)` zamiast `.replace(/\n/g, "<br>")`.
-  - Nowa funkcja `formatParagraphs(html)` — dzieli na `<p class="hl-p">`, nagłówki jako `.hl-p.hl-heading` (≤70 znaków, bez `[.!?,;:]` na końcu).
-  - `renderFindings()` — nowa struktura: `.finding-head` (chip + analyzer), `.quote`, `.finding-msg`, `.sug`, `.show-props`.
-  - IIFE na końcu pliku: live word-count.
-- `src/detektor_web/static/style.css` — **pełny przepis** (~840 linii):
-  - Tokeny: `--bg #f1f5f9` (slate-100), `--surface #fff`, `--surface-2 #f8fafc`, `--text #0f172a` (slate-900), `--text-body #334155`, `--muted #64748b`, `--accent #4f46e5` (indigo-600), `--accent-hover #4338ca`, `--accent-soft #eef2ff`, `--accent-soft-border #c7d2fe`.
-  - `.col-right` = unified card (border+shadow); `.col-right .card { background:transparent; border:none; box-shadow:none }` strippuje dzieci.
-  - `.results { display: contents }` — dzieci `.results` wpadają bezpośrednio do `.col-right`.
-  - Sekcje panelu: `padding 18px 20px` + `border-bottom` jako divider; `.col-right .panel` z accordion-style h3.
-  - Radiobuttony modelu: `.model-radio:has(input:checked)` z accent-soft tłem i indigo wypełnioną kropką.
-  - Severity marks: `border-bottom: 2px solid` (nie border-left) w podświetleniach.
-  - `.text-loader` = mgła (rgba 0.45) + białe badge `::before`.
-  - `.hl-p`, `.hl-heading` — formatowanie artykułu w widoku analizy.
+### PR #28: Redesign v5 „compact bar + 2 kolumny" (`b36573c`)
+Pełne przepisanie `index.html`, `app.js`, `style.css`. Najważniejsze:
+- **Belka analizy** (`#analysis-bar`) = 2 kompaktowe rzędy (~52px każdy): `.abar-controls` (Analizuj, `<select id="model-select">`, checkbox „Z propozycjami", status) + `#abar-results` (liczby Slop/AI jako kolorowy tekst, werdykt, Kopiuj/Humanizuj, toggle „Szczegóły ▾"). Sekcja `#analysis-expand` chowa pełne gauge SVG + sub-werdykt + LLM + wymiary.
+- **Model picker:** `<select>` zamiast 4 radiobuttonów (oszczędność miejsca).
+- **Brak duplikacji:** liczby w belce, gauge SVG tylko w rozwijanej sekcji.
+- **Prawa kolumna:** `#proposals-empty` (empty-state przed analizą) → `#proposals-panel` (po). Pasek `#finding-nav` (← `N/M` →, ✓ Zastosuj).
+- **Synchronizacja scroll:** `navigateTo(idx)` → `scrollToFinding` + `scrollToMark`; klawiatura ←/→/Enter.
+- **Usunięto:** `.popover`, `.results { display: contents }`, radiobuttony modeli.
+- **`--abar-h`** aktualizowane przez `ResizeObserver`.
 
-### PR #25: Usunięcie jednostronnych obramowań + textarea fill viewport
-**Diff (`6b74846`→`9c97dc1`):** tylko `style.css`, 14 ins / 20 del.
-
-Zmiany:
-- `.popover`: usunięto `border-top: 3px solid var(--accent)` (indygowy pasek na górze).
-- `.pop-quote`: usunięto `border-left: 3px solid var(--accent)`; zmieniono na `background: var(--accent-soft); border: 1px solid var(--accent-soft-border); border-radius: var(--radius-sm)`.
-- `.col-right .verdict`: usunięto `border-left: 4px solid var(--muted-2)`; kolor nastroju teraz przez tło: `[data-tone="ok"] { background: #f0fdf4 }`, `[data-tone="warn"] { background: #fff7ed }`.
-- `.finding .quote`: usunięto `border-left: 3px solid` i severity overrides (`.finding.sev-* .quote`); zamiast tego `border: 1px solid var(--border); border-radius: var(--radius-sm)`.
-- `.note`: usunięto `border-left: 3px solid #f59e0b`; zmieniono tło na `#fffbeb`.
-- `.text-box textarea`: `height: 62vh` → `height: calc(100vh - var(--topbar-h) - 200px)` (min-height 320px).
-- `.text-box .highlighted`: `min-height: 62vh` → `min-height: 320px`; `max-height: calc(100vh - 200px)` → `max-height: calc(100vh - var(--topbar-h) - 200px)`.
-- Responsive (`max-width: 900px`): textarea `height: 360px; max-height: 360px`.
+### PR #29 + #30: Fixy v5
+- **#29** (`84ff93c`): pierwsza wersja fixu formatowania (split po pustych liniach), `renderReport` w `try/catch`, przycisk „Załaduj wszystkie (N)" (`loadAllProposals`), `nav-done` bez `margin-left:auto`.
+- **#30** (`cccb5df`, aktualny `main`): **właściwy fix** — `formatRichHtml` przetwarza linia-po-linii (tekst z przeglądarki ma pojedyncze `\n`, brak pustych linii); nagłówek H2 wykrywany gdy krótka linia (≤72 zn.) bez interpunkcji końcowej, po linii kończącej zdanie (`.!?…`), niezaczynająca się polskim słowem-łącznikiem (`i/a/ale/oraz/jednak/...`). `updateNav` ustawia `style.display = "flex"/"none"` zamiast klasy `.hidden`; `#finding-nav` w HTML startuje z `style="display:none"`.
 
 ---
 
-## 2. Co aktualnie działa (fakty z kodu/testów)
+## 2. Co aktualnie działa (fakty z kodu/testów/deployu)
 
-- **34 testów zielone** (`pytest -q`), ruff czysto, `node --check app.js` OK.
-- **Backend bez zmian logiki** — endpointy, heurystyki, LLM, offsets działają jak przed redesignem (redesign dotknął tylko CSS/JS/HTML/config).
-- **PR #25 zmergowany** do `main` (`9c97dc1`). Railway auto-deploy z `main` uruchomiony.
-- **Kurowana lista modeli** działa: `CURATED_MODEL_IDS = ("gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite")` → endpoint `/api/models` zwraca tylko dostępne z tej listy z adnotacją szybkości.
+- **34 testów zielone** (`pytest -q`), ruff czysto, `node --check app.js` OK (uruchomione w tej sesji).
+- **Backend bez zmian logiki** — endpointy, heurystyki, LLM, offsety jak wcześniej.
+- **`main` = `cccb5df`** (PR #30 zmergowany squashem).
+- **Railway deploy `cccb5df` = SUCCESS** (deployment `d491b612...`, 2026-05-27 11:25 UTC, branch `main`).
+- **Kurowana lista modeli** działa (`CURATED_MODEL_IDS` w `config.py`, endpoint `/api/models`).
+- `app.js` ~738 linii, `style.css` ~898 linii.
 
 ---
 
 ## 3. Co niezweryfikowane / założenia
 
-- **ZAŁOŻENIE:** Wizualny wygląd redesignu na produkcji jest poprawny — render lokalny niemożliwy (brak Chromium/Playwright). Nie ma pewności że: unified panel wygląda jak zamierzono, radiobuttony działają poprawnie, formatowanie akapitów/nagłówków jest estetyczne, textarea jest odpowiednio duże, brak artefaktów CSS.
-- **ZAŁOŻENIE:** LLM (Gemini Flash) działa end-to-end na produkcji — nie potwierdzono w tej sesji. W poprzednich sesjach `gemini-3-flash-preview` nie zwracał błędu w logach Railway, ale nie było pełnej weryfikacji sędzia→wynik→propozycje.
-- **ZAŁOŻENIE:** Railway auto-deploy z `main` po merge #25 zakończył się SUCCESS — sprawdź `list-deployments` Railway MCP.
+- **ZAŁOŻENIE:** Wygląd v5 na produkcji jest poprawny — render lokalny niemożliwy (brak Chromium). Użytkownik w trakcie sesji zgłaszał, że nie widzi zmian (cache) oraz że tekst nie miał formatowania → naprawione w #30, ale **nie potwierdzono wizualnie po deploy `cccb5df`**.
+- **ZAŁOŻENIE:** Heurystyka nagłówków `formatRichHtml` daje estetyczny wynik na realnych artykułach — przetestowano logicznie, nie wizualnie.
+- **ZAŁOŻENIE:** LLM (Gemini Flash) działa end-to-end na produkcji — niepotwierdzone w tej sesji.
 
 ---
 
 ## 4. Rekomendowane następne zadanie
 
-**Weryfikacja wizualna redesignu na produkcji** (https://detektor-ai.up.railway.app):
+**Zaplanować całkowity redesign UI wg Material 3 Design Kit** (Figma file `FFoAwp47aqBCjbPUlz23lm`, node `58295-22726`). Kolejność:
+1. Wyciągnąć z kitu tokeny i komponenty (kolory/role, typografia, elevation, kształty/rogi, stany komponentów, spacing). Użyć Figma MCP (`get_design_context`, `get_variable_defs`, `get_screenshot`) — przed `use_figma` załadować skill `/figma-use`.
+2. Zaprojektować docelowy układ i przepływ narzędzia (zachowując fundamenty: dwie kolumny, sticky belka, synchronizacja mark↔finding, tryb heurystyczny live). Spisać w `docs/ROADMAP.md`.
+3. Przedstawić plan użytkownikowi PRZED implementacją (użytkownik wyraźnie prosił: „Zacznijmy od zaplanowania").
+4. Implementacja etapami — każdy etap osobny PR do `main`, weryfikacja na produkcji.
 
-Golden path do sprawdzenia:
-1. Otwórz stronę — sprawdź: Geist font, unified card w prawej kolumnie, radiobuttony modeli z adnotacjami.
-2. Wklej tekst (kilka akapitów) → Analizuj — sprawdź: textarea blade (nie znika) podczas analizy, spinner+badge na wierzchu.
-3. Po analizie: podświetlony tekst z `<p>` i nagłówkami, brak border-top na popoverze po kliknięciu fragmentu, karta finding bez border-left na .quote.
-4. Werdykt: brak lewego borderu, zielone/bursztynowe tło wg tonu.
-5. Kopiuj cały tekst, Humanizuj.
-
-Jeśli cokolwiek wygląda źle → napraw CSS i utwórz nowy PR do `main`.
+Cel nadrzędny (słowa użytkownika): doświadczenie **estetyczne, ale przede wszystkim sprawne, niezawodne, szybkie i przyjemne**.
 
 ---
 
 ## 5. Pliki istotne w kolejnej sesji
 
-- `src/detektor_web/static/style.css` — tokeny `:root`, `.col-right`, `.results`, `.popover`, `.finding`, `.verdict`
-- `src/detektor_web/static/app.js` — `setLeftMode`, `formatParagraphs`, `loadModels`, `renderFindings`
-- `src/detektor_web/templates/index.html` — struktura HTML (radiobuttony, word-count)
-- `src/detektor/config.py` — `CURATED_MODEL_IDS`
-- `src/detektor_web/app.py` — `_curate()`, `_speed_hint()`
+- `src/detektor_web/static/style.css` — tokeny `:root`, `.analysis-bar`/`.abar-*`, `.col-left`/`.col-right`, `.finding`/`.finding-nav`, `.highlighted .hl-*`.
+- `src/detektor_web/static/app.js` — `formatRichHtml`, `renderScores`, `renderReport`, `navigateTo`/`scrollToFinding`/`scrollToMark`, `updateNav`, `loadAllProposals`, `setLeftMode`, `loadModels`, `selectedModel`.
+- `src/detektor_web/templates/index.html` — struktura belki, nav, empty-state, `<select>` modeli.
+- `src/detektor/config.py` — `CURATED_MODEL_IDS`, `gemini_model`.
+- `src/detektor_web/app.py` — `_curate()`, `_speed_hint()`, endpointy.
+- `docs/ROADMAP.md` — roadmapa redesignu M3 (utworzona w tej sesji).
 
 ---
 
 ## 6. Komendy uruchomione w tej sesji i wyniki
 
 ```
-.venv/bin/pytest -q               → 34 passed
-.venv/bin/ruff check src tests    → All checks passed!
+.venv/bin/pytest -q                          → 34 passed (wielokrotnie)
+.venv/bin/ruff check src tests               → All checks passed!
 node --check src/detektor_web/static/app.js  → OK
-git rebase origin/main            → skipped d3a0016 (już w main jako #24), zachował 015af3b
-git push --force-with-lease       → OK
-GitHub merge PR #25 (squash)      → sha 9c97dc1, merged: true
+GitHub merge PR #28 (squash)                 → b36573c, merged
+GitHub merge PR #29 (squash)                 → 84ff93c, merged
+GitHub merge PR #30 (squash)                 → cccb5df, merged
+Railway list-deployments                     → cccb5df SUCCESS (11:25 UTC)
 ```
+
+Uwaga procesowa: kilka PR-ów wymagało wzorca „save → reset `origin/main` → restore → force-with-lease", bo `main` awansował między push a merge (konflikt 405 przy merge).
 
 ---
 
 ## 7. Komendy do uruchomienia w kolejnej sesji
 
 ```bash
-# Sprawdź deploy Railway:
-# Railway MCP → list-deployments (project dc230d9e..., env 533baa05..., service 24b213f8...)
-# Oczekiwane: branch "main", status SUCCESS, commit 9c97dc1
-
-# Nowy dev-branch (jeśli potrzebne zmiany):
-git checkout -B <nowa-nazwa> origin/main
-
-# Standardowe sanity:
+# Sanity:
 .venv/bin/pytest -q
 .venv/bin/ruff check src tests
 node --check src/detektor_web/static/app.js
+
+# Nowy dev-branch na świeżym main:
+git fetch origin main && git checkout -B <nowa-nazwa> origin/main
+
+# Deploy Railway: Railway MCP list-deployments
+#   project dc230d9e-ba34-44d2-8793-baa7ddae9924
+#   env     533baa05-7e6b-46c8-b942-d5c3c3f2bb40
+#   service 24b213f8-0457-4d60-a393-28eb4bd58102
 ```
 
 ---
 
 ## 8. Otwarte pytania i niepewności
 
-1. **Czy redesign wygląda dobrze na produkcji?** — jedyna forma weryfikacji to własne oczy na https://detektor-ai.up.railway.app. Zapytaj użytkownika o feedback przed kolejnymi zmianami CSS.
-2. **Czy LLM (Flash) działa end-to-end?** — sprawdź logi Railway pod `Gemini:`/`Gemini rewrite`. Jeśli błędy → debug `gemini_judge.py`/`rewriter.py`.
-3. **Czy textarea jest odpowiednio duże?** — `calc(100vh - 60px - 200px)` = ~640px na typowym laptopie (768px viewport). Jeśli za duże/małe, popraw stałą 200px w CSS.
-4. **Domyślny model na Railway** — env `GEMINI_MODEL` ustawiony na `gemini-3.1-pro-preview` (wolny, był problem). Rozważyć zmianę na `gemini-3.5-flash` w panelu Railway.
-5. **Auto-merge nie działa** — brak branch protection na `main` → `enable_pr_auto_merge` rzuca błąd. Merge zawsze ręczny przez `merge_pull_request` (squash). Nie próbować naprawiać — to wymaga konfiguracji GitHub repo (poza zakresem).
+1. **Czy v5 wygląda dobrze po deploy `cccb5df`?** — poprosić użytkownika o screen/feedback (cache: hard refresh `Ctrl/Cmd+Shift+R`).
+2. **Zakres redesignu M3** — czy pełna zmiana palety/typografii (odejście od Geist+Indigo na rzecz ról kolorów M3 i Roboto/M3 type scale), czy tylko wybrane komponenty? Doprecyzować z użytkownikiem w fazie planu.
+3. **Czy LLM Flash działa end-to-end?** — sprawdzić logi Railway pod `Gemini:`/`Gemini rewrite`.
+4. **Domyślny model** `GEMINI_MODEL=gemini-3.1-pro-preview` (wolny) — rozważyć Flash w panelu Railway.
+5. **Auto-merge nie działa** (brak branch protection) → merge zawsze ręczny `merge_pull_request` (squash). Nie próbować naprawiać.
