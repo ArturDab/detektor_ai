@@ -15,7 +15,7 @@
   --text: #0f2747;           /* on-surface (granatowy ink) */
   --text-body: #2b3d59;      /* on-surface (treść) */
   --muted: #5b6b85;          /* on-surface-variant */
-  --muted-2: #93a4c0;        /* outline */
+  --muted-2: #5f6d88;        /* outline / drobne napisy (AA ≥4.5 na surface) */
   --border: #d7e3f6;         /* outline-variant (błękit) */
   --border-strong: #bcd0ec;
 
@@ -25,6 +25,7 @@
   --accent-soft: #dbeafe;    /* primary-container (light blue) */
   --accent-soft-border: #bfdbfe;
   --accent-contrast: #ffffff; /* on-primary */
+  --on-accent-soft: #1e40af;  /* on-primary-container (tekst na accent-soft, AA) */
 
   /* --- Kolory semantyczne (własne, dostrojone; czyta je app.js) --- */
   --green: #16a34a;
@@ -713,7 +714,7 @@ mark.mark-active {
 .btn-load-all {
   margin-left: auto;
   background: transparent;
-  color: var(--accent);
+  color: var(--on-accent-soft);
   border: 1px solid var(--accent-soft-border);
   border-radius: var(--radius-sm);
   padding: 4px 11px;
@@ -842,7 +843,7 @@ mark.mark-active {
 .finding .sug { color: var(--green); font-size: 13px; margin-top: 6px; font-weight: 500; line-height: 1.45; }
 .finding .load-props {
   margin-top: 8px; font-size: 12px; font-weight: 600; padding: 5px 12px;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--accent-soft); color: var(--on-accent-soft);
   border: 1px solid var(--accent-soft-border); border-radius: 6px; box-shadow: none;
 }
 .finding .load-props:hover { background: var(--accent); color: #fff; }
@@ -938,8 +939,8 @@ button:active { transform: translateY(1px); box-shadow: var(--shadow-accent), in
 .abar-controls #analyze { border-radius: 999px; padding: 8px 22px; letter-spacing: -0.01em; }
 
 /* Tonal button (Kopiuj / Humanizuj) — neutralny kontener M3 */
-.btn-secondary { background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 999px; padding: 8px 16px; box-shadow: none; }
-.btn-secondary:hover { background: var(--accent-soft); color: var(--accent); border: 0; box-shadow: inset 0 0 0 999px rgba(37, 99, 235, 0.08); }
+.btn-secondary { background: var(--accent-soft); color: var(--on-accent-soft); border: 0; border-radius: 999px; padding: 8px 16px; box-shadow: none; }
+.btn-secondary:hover { background: var(--accent-soft); color: var(--on-accent-soft); border: 0; box-shadow: inset 0 0 0 999px rgba(37, 99, 235, 0.08); }
 
 /* Outlined / text button (mini) */
 .btn-mini { background: transparent; color: var(--text-body); border: 1px solid var(--border-strong); border-radius: 999px; padding: 5px 13px; box-shadow: none; }
