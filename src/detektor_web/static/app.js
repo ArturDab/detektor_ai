@@ -739,4 +739,32 @@ new ResizeObserver(() => {
   update();
 }());
 
+// Przełącznik motywu (jasny/ciemny). Stan: data-theme na <html> + localStorage.
+// Wstępny motyw ustawia inline-skrypt w <head> (bez FOUC); tu tylko obsługa kliknięć.
+(function () {
+  const btn = document.getElementById("theme-toggle");
+  function current() {
+    return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  }
+  function apply(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    if (btn) btn.setAttribute("aria-pressed", String(theme === "dark"));
+  }
+  apply(current());
+  if (btn) {
+    btn.addEventListener("click", function () {
+      const next = current() === "dark" ? "light" : "dark";
+      apply(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    });
+  }
+  try {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (e) {
+      let stored = null;
+      try { stored = localStorage.getItem("theme"); } catch (err) {}
+      if (stored !== "light" && stored !== "dark") apply(e.matches ? "dark" : "light");
+    });
+  } catch (e) {}
+}());
+
 loadModels();
