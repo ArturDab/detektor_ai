@@ -6,6 +6,7 @@ Decyzje: `docs/DECISIONS.md`. Pełny opis funkcji: `README.md`.
 ## 0. Zasady odpowiedzi
 - **Na końcu KAŻDEJ odpowiedzi** dodaj klikalny link do aplikacji produkcyjnej: <https://detektor-ai.up.railway.app>
 - **Zawsze włączaj auto-merge** na tworzonych PR-ach (`enable_pr_auto_merge`, metoda `squash`) i oznaczaj PR jako gotowy do scalenia, aby scalał się automatycznie po spełnieniu wymagań.
+- **Domyślny tryb pracy = „implementuj i wdróż" (opcja 1).** Po zaakceptowaniu kierunku/zadania prowadź pełen cykl bez dopytywania: kod → `pytest` + `ruff` + `node --check` → commit → PR → auto-merge (squash) → **merge do `main` = deploy** (Railway auto-deployuje z `main`). NIE zatrzymuj się na „sam plan" ani „wstrzymaj deploy", chyba że użytkownik wyraźnie poprosi inaczej dla konkretnego zadania.
 - **Po każdym handoffie** (aktualizacji `docs/HANDOFF.md`) wklej jego **pełną treść** bezpośrednio w odpowiedzi w czacie — nie tylko podsumowanie.
 
 ## 1. Opis projektu
