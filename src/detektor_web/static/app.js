@@ -352,8 +352,12 @@ function scrollToFinding(idx) {
 }
 
 function scrollToMark(idx) {
+  document.querySelectorAll("mark.mark-active").forEach((m) => m.classList.remove("mark-active"));
   const mark = document.querySelector(`mark[data-idx="${idx}"]`);
-  if (mark) mark.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (mark) {
+    mark.classList.add("mark-active");
+    mark.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 
 function updateNav() {
