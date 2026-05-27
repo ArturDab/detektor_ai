@@ -116,53 +116,64 @@ function renderHighlighted(text, findings) {
 }
 
 // Formats HTML string (with embedded <mark> tags) into rich block structure.
+// Handles both single-\n and double-\n paragraph separators.
 function formatRichHtml(html) {
-  const rawBlocks = html.split(/\n[ \t]*\n+/);
-  const parts = [];
+  // Split into lines, group by blank lines into blocks
+  const lines = html.split("\n");
+  const blocks = [];
+  let cur = [];
+  for (const line of lines) {
+    if (!line.replace(/<[^>]+>/g, "").trim()) {
+      if (cur.length) { blocks.push(cur); cur = []; }
+    } else {
+      cur.push(line);
+    }
+  }
+  if (cur.length) blocks.push(cur);
+  if (!blocks.length) return `<p class="hl-p">${html}</p>`;
 
-  for (const block of rawBlocks) {
-    if (!block.trim()) continue;
-    const lines = block.split("\n");
-    const firstPlain = lines[0].replace(/<[^>]+>/g, "").trim();
+  const parts = [];
+  for (const block of blocks) {
+    const firstPlain = block[0].replace(/<[^>]+>/g, "").trim();
+
+    // Markdown heading
+    if (/^#{1,2}\s/.test(firstPlain)) {
+      const level = firstPlain.startsWith("## ") ? "hl-h2" : "hl-h1";
+      parts.push(`<h3 class="${level}">${block[0].replace(/^#+\s/, "")}</h3>`);
+      continue;
+    }
 
     // Bullet list
     if (/^[-*•]\s/.test(firstPlain)) {
-      const liItems = lines
+      const items = block
         .filter((l) => l.replace(/<[^>]+>/g, "").trim())
         .map((l) => `<li>${l.replace(/^[-*•]\s/, "")}</li>`);
-      parts.push(`<ul class="hl-ul">${liItems.join("")}</ul>`);
+      parts.push(`<ul class="hl-ul">${items.join("")}</ul>`);
       continue;
     }
 
     // Numbered list
     if (/^\d+[.)]\s/.test(firstPlain)) {
-      const liItems = lines
+      const items = block
         .filter((l) => l.replace(/<[^>]+>/g, "").trim())
         .map((l) => `<li>${l.replace(/^\d+[.)]\s/, "")}</li>`);
-      parts.push(`<ol class="hl-ol">${liItems.join("")}</ol>`);
+      parts.push(`<ol class="hl-ol">${items.join("")}</ol>`);
       continue;
     }
 
-    // Markdown heading
-    if (/^#{1,2}\s/.test(firstPlain)) {
-      const level = firstPlain.startsWith("## ") ? "hl-h2" : "hl-h1";
-      const inner = block.replace(/^#+\s/, "");
-      parts.push(`<h3 class="${level}">${inner}</h3>`);
-      continue;
+    // Single-line heuristic heading: short, no trailing punctuation
+    if (block.length === 1) {
+      const plain = firstPlain;
+      if (plain.length > 0 && plain.length <= 80 && !/[.!?,;:]$/.test(plain)) {
+        parts.push(`<h3 class="hl-h2">${block[0]}</h3>`);
+        continue;
+      }
     }
 
-    // Heuristic heading: single short line without trailing punctuation
-    const plainAll = block.replace(/<[^>]+>/g, "").trim();
-    const isSingleLine = lines.filter((l) => l.replace(/<[^>]+>/g, "").trim()).length === 1;
-    if (isSingleLine && plainAll.length > 0 && plainAll.length <= 80 && !/[.!?,;:]$/.test(plainAll)) {
-      parts.push(`<h3 class="hl-h2">${block.trim()}</h3>`);
-      continue;
-    }
-
-    parts.push(`<p class="hl-p">${block.replace(/\n/g, "<br>")}</p>`);
+    parts.push(`<p class="hl-p">${block.join("<br>")}</p>`);
   }
 
-  return parts.join("") || `<p class="hl-p">${html.replace(/\n/g, "<br>")}</p>`;
+  return parts.join("") || `<p class="hl-p">${html}</p>`;
 }
 
 function renderDimensions(dimensions) {
@@ -279,23 +290,27 @@ function renderReport(r) {
   ACTIVE_IDX = CURRENT.findings.length > 0 ? 0 : -1;
   DONE_COUNT = 0;
 
-  renderScores(r);
-  renderLlmError(r.llm_error);
-  renderNotes(r.notes);
+  try {
+    renderScores(r);
+    renderLlmError(r.llm_error);
+    renderNotes(r.notes);
 
-  const llmBox = $("llm-explanation");
-  if (r.llm_explanation) {
-    llmBox.innerHTML = `<strong>Komentarz LLM:</strong> ${escapeHtml(r.llm_explanation)}`;
-    llmBox.classList.remove("hidden");
-  } else {
-    llmBox.classList.add("hidden");
+    const llmBox = $("llm-explanation");
+    if (r.llm_explanation) {
+      llmBox.innerHTML = `<strong>Komentarz LLM:</strong> ${escapeHtml(r.llm_explanation)}`;
+      llmBox.classList.remove("hidden");
+    } else {
+      llmBox.classList.add("hidden");
+    }
+
+    renderDimensions(r.dimensions);
+    $("highlighted").innerHTML = renderHighlighted(CURRENT.text, CURRENT.findings);
+    renderFindings(CURRENT.findings);
+  } catch (e) {
+    console.error("renderReport render error:", e);
   }
 
-  renderDimensions(r.dimensions);
-  $("highlighted").innerHTML = renderHighlighted(CURRENT.text, CURRENT.findings);
-  renderFindings(CURRENT.findings);
-
-  // Show results row and proposals panel, hide empty state
+  // Always show results and nav, regardless of render errors
   $("abar-results").classList.remove("hidden");
   $("proposals-empty").classList.add("hidden");
   $("proposals-panel").classList.remove("hidden");
@@ -351,6 +366,25 @@ function updateNav() {
   const f = CURRENT.findings[ACTIVE_IDX];
   $("nav-apply").disabled = !f || !f.proposals || !f.proposals.length;
   $("nav-done").textContent = DONE_COUNT > 0 ? `${DONE_COUNT} zastosowano` : "";
+
+  // Show/hide bulk-load button
+  const btn = $("load-all-props");
+  if (btn) {
+    const unloaded = CURRENT.findings.filter((g) => !g.proposals && !g._loading).length;
+    btn.classList.toggle("hidden", unloaded === 0);
+    if (!btn.disabled) btn.textContent = `Załaduj wszystkie (${unloaded})`;
+  }
+}
+
+function loadAllProposals() {
+  const btn = $("load-all-props");
+  const idxs = CURRENT.findings
+    .map((f, i) => ({ f, i }))
+    .filter(({ f }) => !f.proposals && !f._loading)
+    .map(({ i }) => i);
+  if (!idxs.length) return;
+  if (btn) { btn.disabled = true; btn.textContent = `Ładuję ${idxs.length}…`; }
+  idxs.forEach((idx) => loadProposalsForFinding(idx));
 }
 
 async function loadProposalsForFinding(idx) {
@@ -366,10 +400,19 @@ async function loadProposalsForFinding(idx) {
     f._loading = false;
     renderFindings(CURRENT.findings);
     updateNav();
+    // Re-enable bulk button once all loads finish
+    const btn = $("load-all-props");
+    if (btn && btn.disabled && !CURRENT.findings.some((g) => g._loading)) {
+      btn.disabled = false;
+    }
   } catch (e) {
     if (CURRENT.findings[idx] === f) {
       f._loading = false;
       renderFindings(CURRENT.findings);
+      const btn = $("load-all-props");
+      if (btn && btn.disabled && !CURRENT.findings.some((g) => g._loading)) {
+        btn.disabled = false;
+      }
     }
   }
 }
@@ -650,6 +693,7 @@ $("findings").addEventListener("mouseout", (e) => {
 
 $("nav-prev").addEventListener("click", () => navigateTo(ACTIVE_IDX - 1));
 $("nav-next").addEventListener("click", () => navigateTo(ACTIVE_IDX + 1));
+$("load-all-props").addEventListener("click", loadAllProposals);
 $("nav-apply").addEventListener("click", () => {
   const f = CURRENT.findings[ACTIVE_IDX];
   if (f && f.proposals && f.proposals.length) applyReplacement(ACTIVE_IDX, f.proposals[0]);
