@@ -1561,3 +1561,61 @@ input[type="checkbox"]:focus-visible,
 :root[data-theme="dark"] .dim-bar-track {
   background: var(--bg, #1f2330);
 }
+
+/* ═══════════════════════════════════════════
+   FAZA 8.7 — FINDINGS v2 + DIFF INLINE
+   ═══════════════════════════════════════════ */
+
+/* Flat default, shadow on hover, radius-md */
+.finding {
+  box-shadow: none;
+  border-radius: var(--radius-md, 10px);
+  transition:
+    box-shadow var(--dur-fast, 150ms) var(--ease-out, ease),
+    border-color var(--dur-fast, 150ms) var(--ease-out, ease);
+}
+.finding:hover { box-shadow: var(--shadow); }
+
+/* Left severity stripe */
+.finding.sev-high   { border-left: 3px solid var(--color-sev-high-fg); }
+.finding.sev-medium { border-left: 3px solid var(--color-sev-medium-fg); }
+.finding.sev-low    { border-left: 3px solid var(--color-sev-low-fg); }
+.finding.sev-info   { border-left: 3px solid var(--color-sev-info-fg); }
+
+/* Active: accent stripe overrides severity + elevation */
+.finding.active {
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--shadow);
+}
+
+/* Diff inline */
+.diff-del {
+  text-decoration: line-through;
+  background: var(--color-sev-high-bg, #fef2f2);
+  color: var(--color-sev-high-fg, #b91c1c);
+  border-radius: 2px;
+  padding: 0 2px;
+  font-style: normal;
+}
+.diff-ins {
+  background: var(--color-accent-subtle, #d1fae5);
+  color: var(--on-accent-soft, var(--color-accent, #059669));
+  border-radius: 2px;
+  padding: 0 2px;
+  font-style: normal;
+  text-decoration: none;
+}
+.diff-wrap { font-family: var(--font-mono); }
+
+/* prop-preview: adaptive height (replaces fixed 92px) */
+.prop-preview { height: auto !important; min-height: 68px; max-height: 140px; }
+
+/* Dark mode for diff */
+:root[data-theme="dark"] .diff-del {
+  background: rgba(252, 165, 165, 0.14);
+  color: #fca5a5;
+}
+:root[data-theme="dark"] .diff-ins {
+  background: rgba(52, 211, 153, 0.14);
+  color: #34d399;
+}
