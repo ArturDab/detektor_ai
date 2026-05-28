@@ -1,50 +1,96 @@
 /* ================================================================
-   Detektor AI — redesign Material 3 (Faza 1: fundament tokenów)
-   Layout: compact sticky bar + two-col (text | proposals)
-   Font: Geist · Paleta: jasny błękit (M3 primary blue) + struktura M3
-   Tryb jasny; tokeny na zmiennych, gotowe pod dark. Aliasy
-   (--bg/--surface/--accent/...) zachowane — używa ich reszta arkusza
-   i app.js (--green/--yellow/--orange/--red w colorFor).
+   Detektor AI — Faza 8: Rewolucja graficzna
+   Benchmark: Grammarly · Akcent: zielony · Font: Geist
+   Canonical tokens: --color-*, --space-*, --radius-xs/pill, --dur-*, --ease-*
+   Legacy aliases: --bg, --surface, --accent, ... (removal in 8.9)
+   app.js czyta: --green/--yellow/--orange/--red (colorFor)
    ================================================================ */
 
 :root {
-  /* --- Powierzchnie (M3 surface, jasna rampa z błękitnym podtonem) --- */
-  --bg: #eaf1fd;             /* surface-container-low (błękit) */
-  --surface: #ffffff;        /* surface / container-lowest */
-  --surface-2: #f1f6fe;      /* surface-container (błękit) */
-  --text: #0f2747;           /* on-surface (granatowy ink) */
-  --text-body: #2b3d59;      /* on-surface (treść) */
-  --muted: #5b6b85;          /* on-surface-variant */
-  --muted-2: #5f6d88;        /* outline / drobne napisy (AA ≥4.5 na surface) */
-  --border: #d7e3f6;         /* outline-variant (błękit) */
-  --border-strong: #bcd0ec;
+  /* ── CANONICAL TOKENS ── */
 
-  /* --- Akcent: błękit (M3 primary blue) --- */
-  --accent: #2563eb;         /* primary (vivid blue) */
-  --accent-hover: #1d4ed8;
-  --accent-soft: #dbeafe;    /* primary-container (light blue) */
-  --accent-soft-border: #bfdbfe;
-  --accent-contrast: #ffffff; /* on-primary */
-  --on-accent-soft: #1e40af;  /* on-primary-container (tekst na accent-soft, AA) */
+  /* Surfaces — neutral, no blue tint */
+  --color-surface-base: #ffffff;
+  --color-surface-1:    #fcfcfd;
+  --color-surface-2:    #f3f4f6;
+  --color-surface-3:    #e5e7eb;
+  --color-surface-4:    #bcc1ca;
 
-  /* --- Kolory semantyczne (własne, dostrojone; czyta je app.js) --- */
-  --green: #16a34a;
-  --yellow: #ca8a04;
-  --orange: #ea580c;
-  --red: #dc2626;
+  /* Text */
+  --color-text-strong: #0f172a;
+  --color-text-base:   #1f2937;
+  --color-text-muted:  #6b7280;
 
-  /* --- Kształt (skala M3: sm/md/lg) --- */
+  /* Accent — green (Grammarly benchmark) */
+  --color-accent:              #10894e;
+  --color-accent-hover:        #0c6e3f;
+  --color-accent-active:       #0a5e34;
+  --color-accent-subtle:       #dffaee;
+  --color-accent-subtle-border:#a7f3d0;
+  --color-on-accent:           #ffffff;
+
+  /* Severity — 3 levels (info merged into low = blue) */
+  --color-sev-high-fg:     #b91c1c;  --color-sev-high-bg:    #fef2f2;  --color-sev-high-mark:    #fee2e2;  --color-sev-high-border:    #fca5a5;
+  --color-sev-medium-fg:   #b45309;  --color-sev-medium-bg:  #fffbeb;  --color-sev-medium-mark:  #fef3c7;  --color-sev-medium-border:  #fcd34d;
+  --color-sev-low-fg:      #1d4ed8;  --color-sev-low-bg:     #eff6ff;  --color-sev-low-mark:     #dbeafe;  --color-sev-low-border:     #93c5fd;
+  --color-sev-info-fg:     #1d4ed8;  --color-sev-info-bg:    #eff6ff;  --color-sev-info-mark:    #dbeafe;  --color-sev-info-border:    #93c5fd;
+
+  /* Functional */
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error:   #dc2626;
+  --color-info:    #2563eb;
+
+  /* Spacing (4px base) */
+  --space-2: 0.25rem;  /* 4px */
+  --space-3: 0.5rem;   /* 8px */
+  --space-4: 0.75rem;  /* 12px */
+  --space-5: 1rem;     /* 16px */
+  --space-6: 1.25rem;  /* 20px */
+  --space-7: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-9: 2.5rem;   /* 40px */
+
+  /* Radius */
+  --radius-xs:   4px;
+  --radius-pill: 9999px;
+
+  /* Motion */
+  --dur-fast:   120ms;
+  --dur-base:   200ms;
+  --dur-slow:   320ms;
+  --ease-out:     cubic-bezier(0.2,  0.8,  0.2,  1);
+  --ease-in-out:  cubic-bezier(0.4,  0,    0.2,  1);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── LEGACY ALIASES (rest of CSS uses these; removal in 8.9) ── */
+  --bg:                var(--color-surface-2);
+  --surface:           var(--color-surface-base);
+  --surface-2:         var(--color-surface-1);
+  --text:              var(--color-text-strong);
+  --text-body:         var(--color-text-base);
+  --muted:             var(--color-text-muted);
+  --muted-2:           var(--color-text-muted);
+  --border:            var(--color-surface-3);
+  --border-strong:     var(--color-surface-4);
+  --accent:            var(--color-accent);
+  --accent-hover:      var(--color-accent-hover);
+  --accent-soft:       var(--color-accent-subtle);
+  --accent-soft-border:var(--color-accent-subtle-border);
+  --accent-contrast:   var(--color-on-accent);
+  --on-accent-soft:    var(--color-accent);
+  --green:             var(--color-success);
+  --yellow:            var(--color-warning);
+  --orange:            #ea580c;
+  --red:               var(--color-error);
   --radius-lg: 16px;
-  --radius: 12px;
-  --radius-sm: 8px;
-
-  /* --- Elevation (cienie neutralne, poziomy M3 1–3) --- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 6px 2px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 1px 3px rgba(0, 0, 0, 0.10), 0 6px 14px 4px rgba(0, 0, 0, 0.10);
-  --shadow-accent: 0 2px 10px rgba(37, 99, 235, 0.30); /* błękitny glow akcentu */
-  --ring: 0 0 0 3px rgba(37, 99, 235, 0.30);           /* focus ring błękitny */
-
+  --radius:    12px;
+  --radius-sm:  8px;
+  --shadow-sm:    0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+  --shadow:       0 1px 2px rgba(0,0,0,.06), 0 2px 6px 2px rgba(0,0,0,.07);
+  --shadow-lg:    0 1px 3px rgba(0,0,0,.10), 0 6px 14px 4px rgba(0,0,0,.10);
+  --shadow-accent: 0 2px 10px rgba(16,137,78,.25);
+  --ring:          0 0 0 3px rgba(16,137,78,.28);
   --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --topbar-h: 60px;
@@ -105,15 +151,12 @@ body {
   padding-right: 20px;
   border-right: 1px solid var(--border);
 }
-.topbar h1::before {
-  content: "";
-  display: block;
+.topbar h1 .logo {
   width: 28px;
   height: 28px;
-  background: var(--accent);
-  border-radius: 8px;
-  box-shadow: var(--shadow-accent);
+  color: var(--accent);
   flex-shrink: 0;
+  display: block;
 }
 .topbar .pl {
   font-size: 10px;
@@ -597,10 +640,10 @@ button.loading::after {
 
 mark { border-radius: 3px; padding: 1px 3px; color: var(--text-body); cursor: pointer; }
 mark:hover { filter: brightness(0.93); }
-.sev-high   { background: #ffe4e6; border-bottom: 2px solid #fb7185; }
-.sev-medium { background: #ffedd5; border-bottom: 2px solid #fb923c; }
-.sev-low    { background: #fef3c7; border-bottom: 2px solid #fbbf24; }
-.sev-info   { background: #dbeafe; border-bottom: 2px solid #60a5fa; }
+.sev-high   { background: var(--color-sev-high-mark);   border-bottom: 2px solid var(--color-sev-high-border); }
+.sev-medium { background: var(--color-sev-medium-mark); border-bottom: 2px solid var(--color-sev-medium-border); }
+.sev-low    { background: var(--color-sev-low-mark);    border-bottom: 2px solid var(--color-sev-low-border); }
+.sev-info   { background: var(--color-sev-info-mark);   border-bottom: 2px solid var(--color-sev-info-border); }
 
 /* Aktywna marka (po kliknięciu/nawigacji) — mocny błękitny akcent */
 mark.mark-active {
@@ -613,10 +656,10 @@ mark.mark-active {
 
 .legend { margin-bottom: 0; display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font-size: 11px; padding: 2px 9px; border-radius: 999px; font-weight: 600; border: 0; }
-.legend .chip.sev-high   { background: #ffe4e6; color: #be123c; }
-.legend .chip.sev-medium { background: #ffedd5; color: #c2410c; }
-.legend .chip.sev-low    { background: #fef3c7; color: #92400e; }
-.legend .chip.sev-info   { background: #dbeafe; color: #1d4ed8; }
+.legend .chip.sev-high   { background: var(--color-sev-high-bg);   color: var(--color-sev-high-fg); }
+.legend .chip.sev-medium { background: var(--color-sev-medium-bg); color: var(--color-sev-medium-fg); }
+.legend .chip.sev-low    { background: var(--color-sev-low-bg);    color: var(--color-sev-low-fg); }
+.legend .chip.sev-info   { background: var(--color-sev-info-bg);   color: var(--color-sev-info-fg); }
 
 /* ═══════════════════════════════════════════
    SCORE CARDS (in expand section)
@@ -708,7 +751,7 @@ mark.mark-active {
   border-radius: var(--radius-sm); padding: 5px 13px;
   font-size: 13px; font-weight: 700; box-shadow: none; flex-shrink: 0;
 }
-.nav-apply:hover:not(:disabled) { background: #15803d; }
+.nav-apply:hover:not(:disabled) { background: var(--color-accent-hover); }
 .nav-apply:disabled { opacity: 0.35; }
 .nav-done {
   font-size: 12px; color: var(--green); font-weight: 600;
@@ -831,10 +874,10 @@ mark.mark-active {
 }
 .finding-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .finding-analyzer { font-size: 11px; font-family: var(--font-mono); color: var(--muted-2); letter-spacing: 0.02em; }
-.finding .chip.sev-high   { background: #ffe4e6; color: #be123c; }
-.finding .chip.sev-medium { background: #ffedd5; color: #c2410c; }
-.finding .chip.sev-low    { background: #fef3c7; color: #92400e; }
-.finding .chip.sev-info   { background: #dbeafe; color: #1d4ed8; }
+.finding .chip.sev-high   { background: var(--color-sev-high-bg);   color: var(--color-sev-high-fg); }
+.finding .chip.sev-medium { background: var(--color-sev-medium-bg); color: var(--color-sev-medium-fg); }
+.finding .chip.sev-low    { background: var(--color-sev-low-bg);    color: var(--color-sev-low-fg); }
+.finding .chip.sev-info   { background: var(--color-sev-info-bg);   color: var(--color-sev-info-fg); }
 .finding .quote {
   font-weight: 600; color: var(--text);
   background: var(--surface-2); border: 1px solid var(--border);
@@ -867,12 +910,12 @@ mark.mark-active {
 
 .prop-preview {
   margin-top: 8px; padding: 10px 12px; border-radius: var(--radius-sm);
-  background: #f0fdf4; border: 1px solid #bbf7d0;
+  background: var(--color-accent-subtle); border: 1px solid var(--color-accent-subtle-border);
   font-size: 13.5px; line-height: 1.6;
   box-sizing: border-box; height: 92px; overflow-y: auto;
 }
 .prop-preview-hint { color: var(--muted); font-style: italic; }
-.preview-new { background: #bbf7d0; padding: 0 2px; border-radius: 3px; }
+.preview-new { background: var(--color-accent-subtle-border); padding: 0 2px; border-radius: 3px; }
 
 .prop-custom-inline { display: flex; gap: 8px; margin-top: 8px; }
 .prop-custom-inline input {
@@ -943,7 +986,7 @@ button:active { transform: translateY(1px); box-shadow: var(--shadow-accent), in
 
 /* Tonal button (Kopiuj / Humanizuj) — neutralny kontener M3 */
 .btn-secondary { background: var(--accent-soft); color: var(--on-accent-soft); border: 0; border-radius: 999px; padding: 8px 16px; box-shadow: none; }
-.btn-secondary:hover { background: var(--accent-soft); color: var(--on-accent-soft); border: 0; box-shadow: inset 0 0 0 999px rgba(37, 99, 235, 0.08); }
+.btn-secondary:hover { background: var(--accent-soft); color: var(--on-accent-soft); border: 0; box-shadow: inset 0 0 0 999px rgba(16, 137, 78, 0.08); }
 
 /* Outlined / text button (mini) */
 .btn-mini { background: transparent; color: var(--text-body); border: 1px solid var(--border-strong); border-radius: 999px; padding: 5px 13px; box-shadow: none; }
@@ -1033,30 +1076,62 @@ input[type="checkbox"]:focus-visible,
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0e131b;
-  --surface: #161c26;
-  --surface-2: #1d2530;
-  --text: #e7edf6;
-  --text-body: #c5d0e0;
-  --muted: #9aa8bf;
-  --muted-2: #8492a8;
-  --border: #2b3543;
-  --border-strong: #3a4658;
-  --accent: #8ab4f8;
-  --accent-hover: #a6c8ff;
-  --accent-soft: #1e3a5f;
-  --accent-soft-border: #2d4f7c;
-  --accent-contrast: #0b1622;
-  --on-accent-soft: #bcd6ff;
-  --green: #4ade80;
-  --yellow: #facc15;
-  --orange: #fb923c;
-  --red: #f87171;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.55);
-  --shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --shadow-accent: 0 2px 12px rgba(138, 180, 248, 0.25);
-  --ring: 0 0 0 3px rgba(138, 180, 248, 0.5);
+
+  /* ── DARK CANONICAL TOKENS ── */
+  --color-surface-base: #0f1115;
+  --color-surface-1:    #161922;
+  --color-surface-2:    #1f2330;
+  --color-surface-3:    #2e3340;
+  --color-surface-4:    #4a4f5e;
+  --color-text-strong:  #f1f3f8;
+  --color-text-base:    #dbdee5;
+  --color-text-muted:   #9aa1ad;
+
+  /* Accent — lighter green for dark bg */
+  --color-accent:              #34d399;
+  --color-accent-hover:        #2cc28a;
+  --color-accent-active:       #22a973;
+  --color-accent-subtle:       #0e3225;
+  --color-accent-subtle-border:#1a5c3a;
+  --color-on-accent:           #0f1115;
+
+  /* Severity dark (info = low = blue) */
+  --color-sev-high-fg:    #fca5a5;  --color-sev-high-bg:   #2a1414;  --color-sev-high-mark:   #3f1d1d;  --color-sev-high-border:   #7f1d1d;
+  --color-sev-medium-fg:  #fcd34d;  --color-sev-medium-bg: #2a200a;  --color-sev-medium-mark: #3b2d10;  --color-sev-medium-border: #78350f;
+  --color-sev-low-fg:     #93c5fd;  --color-sev-low-bg:    #0e1d3d;  --color-sev-low-mark:    #172a52;  --color-sev-low-border:    #1e3a8a;
+  --color-sev-info-fg:    #93c5fd;  --color-sev-info-bg:   #0e1d3d;  --color-sev-info-mark:   #172a52;  --color-sev-info-border:   #1e3a8a;
+
+  /* Functional dark */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error:   #f87171;
+  --color-info:    #60a5fa;
+
+  /* ── DARK LEGACY ALIASES ── */
+  --bg:                var(--color-surface-base);
+  --surface:           var(--color-surface-1);
+  --surface-2:         var(--color-surface-2);
+  --text:              var(--color-text-strong);
+  --text-body:         var(--color-text-base);
+  --muted:             var(--color-text-muted);
+  --muted-2:           var(--color-text-muted);
+  --border:            var(--color-surface-3);
+  --border-strong:     var(--color-surface-4);
+  --accent:            var(--color-accent);
+  --accent-hover:      var(--color-accent-hover);
+  --accent-soft:       var(--color-accent-subtle);
+  --accent-soft-border:var(--color-accent-subtle-border);
+  --accent-contrast:   var(--color-on-accent);
+  --on-accent-soft:    var(--color-accent);
+  --green:             var(--color-success);
+  --yellow:            var(--color-warning);
+  --orange:            #fb923c;
+  --red:               var(--color-error);
+  --shadow-sm:    0 1px 2px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.55);
+  --shadow:       0 2px 6px rgba(0,0,0,.5),  0 4px 12px rgba(0,0,0,.45);
+  --shadow-lg:    0 8px 24px rgba(0,0,0,.6);
+  --shadow-accent: 0 2px 12px rgba(52,211,153,.2);
+  --ring:          0 0 0 3px rgba(52,211,153,.35);
 }
 
 /* Karta pod spinnerem (była biała) */
@@ -1066,37 +1141,37 @@ input[type="checkbox"]:focus-visible,
 :root[data-theme="dark"] .abar-verdict[data-tone="ok"]   { background: rgba(74, 222, 128, 0.12); border-color: rgba(74, 222, 128, 0.35); }
 :root[data-theme="dark"] .abar-verdict[data-tone="warn"] { background: rgba(251, 146, 60, 0.12); border-color: rgba(251, 146, 60, 0.35); }
 
-/* Marki podświetleń — translucentne washe (tekst pozostaje jasny) */
-:root[data-theme="dark"] .sev-high   { background: rgba(251, 113, 133, 0.22); }
-:root[data-theme="dark"] .sev-medium { background: rgba(251, 146, 60, 0.22); }
-:root[data-theme="dark"] .sev-low    { background: rgba(250, 204, 21, 0.18); }
-:root[data-theme="dark"] .sev-info   { background: rgba(96, 165, 250, 0.22); }
+/* Marki podświetleń — translucentne washe */
+:root[data-theme="dark"] .sev-high   { background: rgba(252, 165, 165, 0.20); }
+:root[data-theme="dark"] .sev-medium { background: rgba(252, 211, 77,  0.18); }
+:root[data-theme="dark"] .sev-low    { background: rgba(147, 197, 253, 0.20); }
+:root[data-theme="dark"] .sev-info   { background: rgba(147, 197, 253, 0.20); }
 
-/* Chipy severity (legenda + karty) — translucent + jasny kolorowy tekst */
+/* Chipy severity (legenda + karty) */
 :root[data-theme="dark"] .legend .chip.sev-high,
-:root[data-theme="dark"] .finding .chip.sev-high   { background: rgba(251, 113, 133, 0.18); color: #fda4af; }
+:root[data-theme="dark"] .finding .chip.sev-high   { background: rgba(252, 165, 165, 0.16); color: var(--color-sev-high-fg); }
 :root[data-theme="dark"] .legend .chip.sev-medium,
-:root[data-theme="dark"] .finding .chip.sev-medium { background: rgba(251, 146, 60, 0.18); color: #fdba74; }
+:root[data-theme="dark"] .finding .chip.sev-medium { background: rgba(252, 211, 77,  0.15); color: var(--color-sev-medium-fg); }
 :root[data-theme="dark"] .legend .chip.sev-low,
-:root[data-theme="dark"] .finding .chip.sev-low    { background: rgba(250, 204, 21, 0.16); color: #fde047; }
+:root[data-theme="dark"] .finding .chip.sev-low    { background: rgba(147, 197, 253, 0.16); color: var(--color-sev-low-fg); }
 :root[data-theme="dark"] .legend .chip.sev-info,
-:root[data-theme="dark"] .finding .chip.sev-info   { background: rgba(96, 165, 250, 0.18); color: #bcd6ff; }
+:root[data-theme="dark"] .finding .chip.sev-info   { background: rgba(147, 197, 253, 0.16); color: var(--color-sev-info-fg); }
 
 /* Alerty / nota */
 :root[data-theme="dark"] .alert-error { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.35); color: #fca5a5; }
 :root[data-theme="dark"] .note         { background: rgba(250, 204, 21, 0.10); border-color: rgba(250, 204, 21, 0.30); color: #fde047; }
 
 /* Podgląd humanizacji */
-:root[data-theme="dark"] .prop-preview { background: rgba(74, 222, 128, 0.10); border-color: rgba(74, 222, 128, 0.30); }
-:root[data-theme="dark"] .preview-new  { background: rgba(74, 222, 128, 0.30); }
+:root[data-theme="dark"] .prop-preview { background: var(--color-accent-subtle); border-color: var(--color-accent-subtle-border); }
+:root[data-theme="dark"] .preview-new  { background: var(--color-accent-subtle-border); }
 
 /* Aktywna karta: prawie-białe wstawki → ciemne translucentne */
 :root[data-theme="dark"] .finding.active .quote    { background: rgba(0, 0, 0, 0.22); }
 :root[data-theme="dark"] .finding.active .prop-opt  { background: rgba(255, 255, 255, 0.06); }
 
 /* „Zastosuj": ciemniejsza zieleń pod biały tekst (AA) */
-:root[data-theme="dark"] .nav-apply                       { background: #15803d; }
-:root[data-theme="dark"] .nav-apply:hover:not(:disabled)  { background: #166534; }
+:root[data-theme="dark"] .nav-apply                       { background: #059669; }
+:root[data-theme="dark"] .nav-apply:hover:not(:disabled)  { background: #047857; }
 
 /* Hover nav-btn: rozjaśnij zamiast przyciemniać */
 :root[data-theme="dark"] .nav-btn:hover:not(:disabled) { box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.06); }
