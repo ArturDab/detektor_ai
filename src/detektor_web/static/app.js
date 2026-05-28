@@ -27,6 +27,27 @@ function escapeHtml(s) {
   );
 }
 
+function showToast({ text, variant = "success" }) {
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    document.body.appendChild(container);
+  }
+  const el = document.createElement("div");
+  el.className = `toast toast-${variant}`;
+  el.setAttribute("role", "status");
+  el.setAttribute("aria-live", "polite");
+  el.textContent = text;
+  container.appendChild(el);
+  const dismiss = () => {
+    el.classList.add("toast-exit");
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+    setTimeout(() => el.remove(), 300);
+  };
+  setTimeout(dismiss, 2000);
+}
+
 function selectedModel() {
   const sel = $("model-select");
   return sel && sel.value ? sel.value : undefined;
@@ -524,16 +545,12 @@ async function regenerateProposals(idx, btn) {
 async function copyAll() {
   const text = $("text").value;
   if (!text) return;
-  const btn = $("copy-all");
   try {
     await navigator.clipboard.writeText(text);
-    $("humanize-status").textContent = "Skopiowano cały tekst do schowka.";
-    btn.textContent = "Skopiowano ✓";
-    clearTimeout(btn._copyT);
-    btn._copyT = setTimeout(() => { btn.textContent = "Kopiuj tekst"; }, 1800);
+    showToast({ text: "Tekst skopiowany ✓", variant: "success" });
   } catch (e) {
     $("text").select();
-    $("humanize-status").textContent = "Zaznaczono tekst — skopiuj ręcznie (Ctrl/Cmd+C).";
+    showToast({ text: "Zaznaczono tekst — skopiuj ręcznie (Ctrl/Cmd+C).", variant: "error" });
   }
 }
 
