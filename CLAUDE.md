@@ -23,27 +23,31 @@ Hybryda: deterministyczne heurystyki + opcjonalny sędzia LLM (Gemini).
 - **Gałąź integracyjna = `main`** (PR-y celują w `main`, squash-merge). **Railway auto-deployuje z `main`** (panel: service `web` → Settings → Source → Branch = `main`, „Auto deploys when pushed to GitHub" = ON, „Wait for CI" = OFF — brak CI w repo). Deploy = po prostu merge PR do `main`.
 - Klucz `GEMINI_API_KEY` ustawiany w panelu Railway (NIE w repo). Bez klucza apka działa w trybie heurystyk.
 
-## 3. Aktualny stan implementacji (zweryfikowane: kod, 34/34 testów, ruff czysto, deploy #30 `cccb5df` z `main`, SUCCESS)
-- Rdzeń: segmentacja PL, 5 heurystyk, fuzja w 2 wskaźniki, sędzia Gemini (`gemini_judge.py`). **Backend bez zmian logiki od dawna** — redesigny dotykają tylko CSS/JS/HTML/config.
+## 3. Aktualny stan implementacji (zweryfikowane: 34/34 testów, ruff czysto, node --check OK, deploy #42 `39dbe00` z `main`, SUCCESS 2026-05-28 10:28 UTC)
+- Rdzeń: segmentacja PL, 5 heurystyk, fuzja w 2 wskaźniki, sędzia Gemini (`gemini_judge.py`). **Backend bez zmian logiki od dawna** — redesigny dotykają tylko CSS/JS/HTML/config + `app.py` (cache-busting + `Cache-Control` na HTML).
 - Endpointy: `GET /healthz`, `GET /api/models`, `POST /api/analyze` (param `humanize`, `judge`), `POST /api/rewrite`, `POST /api/humanize`.
 - **Tryb heurystyczny na żądanie:** `analyze_text(..., use_llm=False)` / `/api/analyze {"judge": false}` pomija sędziego LLM — używane do live-przeliczania ocen.
-- **UI = redesign v5 „compact bar + dwie kolumny"** (font Geist, paleta Slate + Indigo). UWAGA: poprzedni „unified panel" z `display:contents`, `.popover` i radiobuttonami modeli ZOSTAŁ USUNIĘTY — opis poniżej to stan faktyczny:
-  - **Górna sticky belka analizy** (`#analysis-bar`, 2 kompaktowe rzędy po ~52px):
+- **UI = redesign v5 + M3 dark + audyt a11y (Faza 7)** (font Geist, jasny błękit M3 light / ciemna rampa M3 dark, pill-shape + state-layery):
+  - **Cache-busting**: `?v=<sha1[:8]>` przy `style.css`/`app.js` (helper `_asset_version` w `app.py`); HTML serwowany `Cache-Control: no-store, max-age=0, must-revalidate` → każdy deploy widoczny od razu, bez hard refresh.
+  - **Dark mode (M3)**: tokeny w `:root[data-theme="dark"]`, toggle `#theme-toggle` w topbarze (`aria-pressed`, `:focus-visible`), inline-skrypt w `<head>` przed CSS (bez FOUC, `localStorage` + `prefers-color-scheme`), `color-scheme: dark` dla natywnych kontrolek.
+  - **Górna sticky belka analizy** (`#analysis-bar`, 2 kompaktowe rzędy po ~52 px):
     - Rząd 1 (`.abar-controls`, zawsze widoczny): `Analizuj` · `<select id="model-select">` (kurowana lista modeli) · checkbox „Z propozycjami" · status.
-    - Rząd 2 (`#abar-results`, po analizie): liczby Slop/AI (kolorowy tekst, nie SVG) · werdykt headline · `Kopiuj tekst` · `Humanizuj wszystko` · toggle „Szczegóły ▾".
+    - Rząd 2 (`#abar-results`, po analizie): liczby Slop/AI (kolorowy tekst + `tabular-nums`) · werdykt headline · `Kopiuj tekst` (z feedbackiem „Skopiowano ✓") · `Humanizuj wszystko` · toggle „Szczegóły ▾".
     - Sekcja rozwijana (`#analysis-expand`): pełne gauge SVG, sub-werdykt, błąd LLM, komentarz LLM, wymiary jakości.
     - `--abar-h` aktualizowane przez `ResizeObserver` → poprawny `top` sticky prawej kolumny.
-  - **Lewa kolumna** (`.col-left` / `.text-pane`): textarea (wsad) → nakładka spinner (`.text-loader`) → podświetlony tekst (`#highlighted`). `setLeftMode("edit"|"loading"|"view")`. Textarea wypełnia viewport (`calc(100vh - topbar - abar - 150px)`).
+  - **Lewa kolumna** (`.col-left` / `.text-pane`): textarea (wsad) → nakładka spinner (`.text-loader`) → podświetlony tekst (`#highlighted`). `setLeftMode("edit"|"loading"|"view")`. Textarea wypełnia viewport. Nagłówek panelu ma przyciski **`Wklej przykład`** (`#load-example`) i **`Wyczyść`** (`#clear-text`) — `updateInputButtons` pokazuje właściwy stan w trybie edycji.
   - **Prawa kolumna** (`.col-right`, sticky, scroll): pasek nawigacji `#finding-nav` (← `1/N` → · ✓ Zastosuj · „Załaduj wszystkie (N)") → empty-state przed analizą (`#proposals-empty`) lub panel propozycji (`#proposals-panel` z `#findings`).
   - **Synchronizacja:** klik w `<mark>` w tekście → scroll do karty propozycji i odwrotnie (`navigateTo` → `scrollToFinding` + `scrollToMark`). Klawiatura: ←/→ nawigacja, Enter = zastosuj 1. propozycję.
-  - **Formatowanie tekstu** (`formatRichHtml`): analiza linia-po-linii; nagłówek H2 gdy krótka linia (≤72 zn.) bez interpunkcji końcowej, po linii kończącej zdanie (`.!?…`) i NIE zaczynająca się polskim słowem-łącznikiem (`i/a/ale/oraz/...`). Listy `-`/`1.` → `<ul>`/`<ol>`. Markdown `#`/`##` → H1/H2.
-  - **Bulk-load propozycji:** `loadAllProposals()` — przycisk „Załaduj wszystkie (N)" w `#finding-nav`, gdy część fragmentów nie ma jeszcze propozycji (np. analiza bez „Z propozycjami"); ładuje równolegle, znika gdy gotowe.
+  - **Formatowanie tekstu** (`formatRichHtml`): analiza linia-po-linii; H2 gdy krótka linia (≤72 zn.) bez interpunkcji końcowej, po linii kończącej zdanie (`.!?…`) i NIE zaczynająca się polskim słowem-łącznikiem (`i/a/ale/oraz/...`). Listy `-`/`1.` → `<ul>`/`<ol>`. Markdown `#`/`##` → H1/H2.
+  - **Bulk-load propozycji:** `loadAllProposals()` — przycisk „Załaduj wszystkie (N)" w `#finding-nav`, gdy część fragmentów nie ma propozycji; ładuje równolegle, znika gdy gotowe.
   - **Oceny na bieżąco:** `refreshScores()` przelicza heurystycznie (`judge:false`) po każdej zamianie propozycji — NIE rusza listy fragmentów ani podświetleń.
+  - **A11y (Faza 7)**: skip-link „Przejdź do treści" → `#main`; `<meta name="theme-color">` light/dark; `aria-label` na ikonowych nav-prev/next (glify w `<span aria-hidden="true">`), na `<textarea>` i `<select>`; `aria-live="polite"` na `#status`/`#humanize-status`/`#nav-done`; `aria-hidden` na dekoracyjnej `.empty-icon`.
+  - **Typografia/touch (Faza 7)**: `…` zamiast `...` w placeholderze i „Analizuję…"; `font-variant-numeric: tabular-nums` dla cyfr (`.word-count`, `.bar-score-num`, `.g-num`); `touch-action: manipulation` w base `button` (eliminacja 300 ms tap-delay iOS).
 - Humanizacja: propozycje per fragment (3 + pole własne), podgląd przy najechaniu, przepisania równoległe.
 - Diagnostyka błędu LLM: `Report.llm_error` + notatka „Powód: …".
 
 ## 4. Aktywna faza
-**Planowanie całkowitego redesignu UI wg Material 3 Design Kit** (Figma file `FFoAwp47aqBCjbPUlz23lm`, node `58295-22726`). Cel: zachować obecne fundamenty (FastAPI + vanilla JS, dwie kolumny, sticky belka, synchronizacja mark↔finding), ale przeprojektować estetykę i dopracować UX — sprawność, niezawodność, szybkość, przyjemność użycia. **Najpierw plan** (układ + zachowanie), dopiero potem implementacja. Szczegóły i fazy: `docs/ROADMAP.md`. Render frontu lokalnie niemożliwy (brak Chromium) → weryfikacja na produkcji po deployu.
+**Przygotowanie do nowej szaty graficznej (planowanie w kolejnej sesji).** Użytkownik w prompcie kończącym tę sesję zapowiedział: „W kolejnym kroku opracujemy zupełnie nową szatę graficzną dla aplikacji (…) Będę Cię prosił o analizę, rekomendacje i opracowanie szczegółowego planu. Ale zrobimy to już w osobnej konwersacji." Cel: nowy układ + estetyka + UX (intuicyjniejsze reakcje na działania użytkownika, lepsze formatowanie tekstów/ramek, nowa belka górna), z zachowaniem fundamentów (FastAPI + vanilla JS, brak builda frontu). **Wyjątek od trybu „implementuj i wdroż" (§0):** kolejna sesja zaczyna się od analizy/rekomendacji/planu — NIE od kodu. Bieżąca roadmapa M3 (Fazy 0–7) zamknięta; nowa szata będzie kolejną iteracją (Faza 8+). Szczegóły handoffu: `docs/HANDOFF.md`. Render frontu lokalnie niemożliwy (brak Chromium) → weryfikacja na produkcji po deployu.
 
 ## 5. Ukończone fazy
 1. Rdzeń heurystyk + fuzja + sędzia LLM (+ tryb bez klucza).
@@ -61,11 +65,16 @@ Hybryda: deterministyczne heurystyki + opcjonalny sędzia LLM (Gemini).
 13. **Pełny redesign UI wg kitu „3 Free Text Editor"** (Geist + Slate + Indigo, unified right panel, `display:contents`, popover, radiobuttony modeli) (#21–#25).
 14. **Redesign v5 „compact bar + 2 kolumny":** pozioma sticky belka analizy (2 rzędy), `<select>` modeli zamiast radiobuttonów, kolorowe liczby zamiast SVG w belce, prawa kolumna = empty-state → propozycje, nawigacja ←/→ z synchronizacją mark↔finding, usunięto popover/`display:contents` (#27, #28).
 15. **Fixy v5:** `formatRichHtml` wykrywa nagłówki w tekście z pojedynczymi `\n` (heurystyka polskich słów-łączników), `updateNav` przez `style.display` (nie `.hidden`), przycisk „Załaduj wszystkie (N)" do zbiorczego ładowania propozycji (#29, #30).
+16. **Redesign M3 (komponenty + motion + WCAG):** pill-shape + state-layery (#33), jasna błękitna paleta (#34), motion + `:focus-visible` + `prefers-reduced-motion` (#35), audyt kontrastu WCAG AA + `--muted-2`/`--on-accent-soft` (#36).
+17. **Faza 5 (cache-busting + dark mode + no-cache HTML):** `?v=<sha1[:8]>` przy `style.css`/`app.js` (#37), dark mode M3 + toggle bez FOUC w `<head>` + `color-scheme` (#38), HTML `Cache-Control: no-store` + widoczniejszy toggle (#39).
+18. **Skill `web-design-guidelines` (Vercel)** dodany do `.agents/skills/` (#40) — pobiera świeże guidelines z GitHub przy każdym uruchomieniu.
+19. **Faza 6 — drobne UX (#41):** przyciski „Wklej przykład" / „Wyczyść" w panelu tekstu, `EXAMPLE_TEXT`, feedback „Skopiowano ✓" w `copyAll`.
+20. **Faza 7 — audyt web-design-guidelines + fixy (#42):** a11y (skip-link, `theme-color`, `aria-label`/`aria-live`/`aria-hidden`), typografia (`…`, `tabular-nums`), interakcja (`touch-action: manipulation`).
 
 ## 6. Następne działania (priorytetowo)
-1. **Zaplanować redesign Material 3** (`docs/ROADMAP.md`): wyciągnąć tokeny/komponenty z kitu Figma (kolory, typografia, elevation, kształty, stany), zaprojektować docelowy układ i przepływ, dopiero potem implementować etapami. Każdy etap = osobny PR do `main`, weryfikacja na produkcji.
-2. **Zweryfikować v5 na produkcji** (wizualnie): formatowanie tekstu (nagłówki/akapity/listy), widoczność i synchronizacja paska `#finding-nav`, empty-state, `<select>` modeli, „Załaduj wszystkie".
-3. **Potwierdzić LLM Flash end-to-end** — logi Railway pod `Gemini:`/`Gemini rewrite` dla `gemini-3-flash-preview`/`gemini-3.5-flash`.
+1. **Nowa szata graficzna — analiza, rekomendacje, szczegółowy plan** (w kolejnej sesji, na życzenie użytkownika). Wynik = `docs/ROADMAP.md` Faza 8 (układ, paleta/font/komponenty/szkielet, fazy implementacyjne). **Nie zaczynać kodu przed akceptacją planu.**
+2. **Weryfikacja wizualna Fazy 7 na produkcji**: skip-link (Tab od początku), `theme-color` (mobile chrome), `tabular-nums` (brak skoków cyfr), `touch-action` (brak 300 ms tap-delay iOS); kontrast dark mode (M3) na realnych ekranach.
+3. **Potwierdzić LLM Flash end-to-end** — logi Railway pod `Gemini:`/`Gemini rewrite` dla `gemini-3.5-flash` / `gemini-3-flash-preview`.
 4. Rozważyć zmianę domyślnego `GEMINI_MODEL` (env Railway) z `gemini-3.1-pro-preview` na Flash (szybciej, mniej błędów).
 5. (Opcjonalnie) typecheck (mypy/pyright).
 
@@ -81,10 +90,14 @@ Hybryda: deterministyczne heurystyki + opcjonalny sędzia LLM (Gemini).
 ## 8. Ważne decyzje architektoniczne (skrót; pełne w docs/DECISIONS.md)
 - Deploy = **natywna integracja GitHub↔Railway** (nie CLI/MCP — sandbox nie ma sieci do Railway).
 - **`main` = gałąź integracyjna**; dev-branch opieraj na `origin/main`, PR → `main`, squash-merge. Po squashu: `git checkout -B <dev> origin/main` (force-with-lease po push).
-- **Konflikt merge = "save → reset → restore"** (gdy main awansował przed push): skopiuj zmienione pliki do /tmp, `git checkout -B branch origin/main`, przywróć pliki, commit, `push --force-with-lease`. Sprawdzone wielokrotnie w tej sesji (PR #28/#29/#30).
+- **Konflikt merge = "save → reset → restore"** (gdy main awansował przed push): skopiuj zmienione pliki do /tmp, `git checkout -B branch origin/main`, przywróć pliki, commit, `push --force-with-lease`. Sprawdzone wielokrotnie.
 - **Layout v5:** górna sticky belka `#analysis-bar`; prawa kolumna `.col-right` jest sticky z `top: calc(topbar + --abar-h + 12px)`; `--abar-h` utrzymywane przez `ResizeObserver`. NIE używać już `display:contents` ani `.popover` (usunięte).
 - **`#finding-nav` przez `style.display`** (nie `.hidden`) — `updateNav()` ustawia `flex`/`none` bezpośrednio, by ominąć problemy ze specyficznością CSS.
 - **Live oceny** = `/api/analyze` z `judge=false`; lista fragmentów/podświetlenia zarządzane lokalnie.
+- **Cache-busting**: `?v=<sha1[:8]>` w URL-ach `style.css`/`app.js` (helper `_asset_version` w `app.py`, wstrzykiwane do szablonu). HTML serwowany `Cache-Control: no-store, max-age=0, must-revalidate` — każdy deploy widoczny od razu, bez hard refresh.
+- **Dark mode**: `data-theme="dark"` na `<html>` (ustawiane inline-skryptem w `<head>` PRZED CSS — bez FOUC; `localStorage("theme")` + fallback `prefers-color-scheme`). Tokeny dark w `:root[data-theme="dark"]`; `color-scheme: dark` dla natywnych kontrolek (scrollbar/select/inputs); twarde kolory (marki, chipy, alerty, podgląd, nakładki) nadpisane scoped.
+- **A11y baseline (Faza 7)**: skip-link → `#main`, `<meta name="theme-color">` light/dark, `aria-label` na ikonowych nav/textarea/select, `aria-live="polite"` na statusach, `aria-hidden` na dekoracji; `touch-action: manipulation` w base `button`; `font-variant-numeric: tabular-nums` na cyfrach.
+- **Skill audytu (`.agents/skills/web-design-guidelines`)** — pobiera świeże guidelines z GitHub przy każdym uruchomieniu; uruchamiać po każdej fazie redesignu.
 - LLM zawsze opcjonalny; graceful degradation do heurystyk. Model per-żądanie.
 
 ## 9. Kluczowe komendy
@@ -111,7 +124,8 @@ node --check src/detektor_web/static/app.js   # sanity JS (brak builda)
 - `src/detektor/` — rdzeń: `pipeline.py`, `fusion.py`, `models.py`, `config.py` (`CURATED_MODEL_IDS`), `humanize.py`.
   - `heuristics/` + `data/*.yaml` — analizatory i leksykony.
   - `llm/` — `gemini_judge.py`, `rewriter.py`, `discovery.py`, `prompts.py`, `schema.py`.
-- `src/detektor_web/` — `app.py` (`_curate()`, `_speed_hint()`, `_with_model()`), `templates/index.html` (`#analysis-bar` 2-rzędy, `#finding-nav`, `#proposals-empty`/`#proposals-panel`, `<select id="model-select">`, `word-count`), `static/app.js` (~738 linii: `setLeftMode`, `refreshScores`, `formatRichHtml`, `renderScores`, `navigateTo`/`scrollToFinding`/`scrollToMark`, `updateNav`, `loadAllProposals`, `loadModels`, `selectedModel`), `static/style.css` (~898 linii, tokeny w `:root`).
+- `src/detektor_web/` — `app.py` (181 linii; `_curate()`, `_speed_hint()`, `_with_model()`, **`_asset_version()`** + `Cache-Control: no-store` na HTML), `templates/index.html` (198 linii; inline theme-script w `<head>` przed CSS, `theme-color` light/dark, skip-link, `<main id="main">`, `#analysis-bar` 2-rzędy, `#load-example`/`#clear-text`, `#finding-nav`, `#proposals-empty`/`#proposals-panel`, `<select id="model-select">`, `#theme-toggle`, `word-count`), `static/app.js` (811 linii: `setLeftMode`, `refreshScores`, `formatRichHtml`, `renderScores`, `navigateTo`/`scrollToFinding`/`scrollToMark`, `updateNav`, `loadAllProposals`, `loadModels`, `selectedModel`, `EXAMPLE_TEXT`, `updateInputButtons`, `copyAll` z feedbackiem, theme toggle `applyTheme`), `static/style.css` (1151 linii; tokeny w `:root` + `:root[data-theme="dark"]`, blok Fazy 7 na końcu: `.skip-link`, `tabular-nums`, `touch-action`).
+- `.agents/skills/web-design-guidelines/SKILL.md` — skill audytu (pobiera świeże Web Interface Guidelines z GitHub).
 - `tests/` — pytest. `pyproject.toml`, `requirements.txt`, `Procfile`, `.python-version`, `.env.example`.
 
 ## 11. Strefy ostrożności (nie ruszać bez potrzeby)
@@ -119,14 +133,24 @@ node --check src/detektor_web/static/app.js   # sanity JS (brak builda)
 - **`llm/schema.py`** — zmiana psuje parsowanie structured-output Gemini.
 - **`heuristics/*.py` i `data/*.yaml`** — nie zmieniać regexów/kluczy; tylko teksty `message`/`suggestion`.
 - **`Procfile`, `.python-version`, `requirements.txt`** — wpływają na build Railway.
+- **`app.py` cache-busting / no-cache HTML:**
+  - `_asset_version()` zwraca `sha1(plik)[:8]` — zmiana pliku → nowy hash → nowy URL. NIE zmieniać formatu bez ostrożności (front osadza `?v=...`).
+  - HTML serwowany z `Cache-Control: no-store, max-age=0, must-revalidate` — gwarantuje, że nowy `?v=...` dociera od razu. Jeśli przywrócisz cache na HTML, użytkownik utknie ze starym hashem.
 - **CSS — krytyczne reguły:**
   - `.hidden { display: none !important }` — MUSI mieć `!important`; inne reguły ustawiają `display` z niższą specyficznością.
   - `--abar-h` (token w `:root`) jest nadpisywane z JS (`ResizeObserver`) — od niego zależy `top`/`max-height` sticky `.col-right`. Nie hardkodować wysokości belki w innych regułach.
   - `#finding-nav` jest sterowany z JS przez `style.display` (inline) — reguła CSS dla `.finding-nav` nie powinna wymuszać `display`.
+  - **`:root[data-theme="dark"]`** — tokeny dark scoped; `color-scheme: dark` MUSI tam zostać (inaczej Windows dark mode psuje natywne kontrolki).
+  - Twarde kolory (marki, chipy, alerty, podgląd, nakładki) są nadpisywane scoped w sekcji dark — nie cofać bez audytu kontrastu.
+- **HTML:**
+  - **Inline theme-script w `<head>` PRZED `<link rel="stylesheet">`** — bez tego pojawi się FOUC (flash białego ekranu) przy `data-theme="dark"`. Skrypt musi być synchroniczny.
+  - `<meta name="theme-color">` jest podwójny (light + dark media queries) — utrzymywać oba.
+  - Skip-link `<a class="skip-link" href="#main">` MUSI mieć target `id="main"` na `<main>`.
 - **`app.js`:**
   - `setLeftMode` steruje widocznością textarea/spinnera/podświetleń; `refreshScores` celowo NIE rusza listy fragmentów ani podświetleń.
   - `formatRichHtml` — heurystyka nagłówków jest delikatna (polskie słowa-łączniki, próg 72 zn., koniec zdania `.!?…`). Zmiana progu/regexu może zepsuć podział na akapity vs nagłówki.
   - `renderReport` owija render w `try/catch`, by `updateNav()` zawsze się wykonał i pasek nawigacji zawsze się pojawił.
+  - `applyTheme` musi pozostać idempotentne (ustawia `data-theme`, zapisuje `localStorage`, aktualizuje `aria-pressed`).
 
 ## 12. Checklista weryfikacyjna (przed uznaniem zmiany za gotową)
 - [ ] `.venv/bin/pytest -q` → 34 zielone.
@@ -138,4 +162,4 @@ node --check src/detektor_web/static/app.js   # sanity JS (brak builda)
 - [ ] Deploy: scal PR do `main` (squash) → Railway auto-build; sprawdź `list-deployments` (branch `main`, SUCCESS).
 
 ## 13. Najnowsza nota handoff
-`main` = `cccb5df` (#30); Railway deploy SUCCESS (commit `cccb5df`, 2026-05-27 11:25 UTC). W tej sesji przeprowadzono **redesign v5 „compact bar + 2 kolumny"** (#27, #28): pozioma sticky belka analizy (2 rzędy), `<select>` modeli zamiast radiobuttonów, kolorowe liczby Slop/AI zamiast SVG w belce, prawa kolumna z empty-state → propozycjami, nawigacja ←/→ z synchronizacją mark↔finding, **usunięto popover i `display:contents`**. Następnie fixy (#29, #30): `formatRichHtml` poprawnie wykrywa nagłówki w tekście z pojedynczymi `\n` (heurystyka polskich słów-łączników), `updateNav` przez `style.display`, przycisk „Załaduj wszystkie (N)". **Następny krok:** zaplanować całkowity redesign wg **Material 3 Design Kit** (Figma `FFoAwp47aqBCjbPUlz23lm`) — najpierw plan układu i zachowania (`docs/ROADMAP.md`), potem implementacja etapami. Pełny handoff: `docs/HANDOFF.md`.
+`main` = `39dbe00` (#42); Railway deploy SUCCESS (commit `39dbe00`, 2026-05-28 10:28 UTC). Od poprzedniego handoffu (`cccb5df`) scalono 9 PR-ów do `main`: redesign M3 komponenty (#33), jasna paleta (#34), motion + a11y (#35), WCAG AA (#36), cache-busting (#37), dark mode + toggle bez FOUC (#38), HTML no-cache + widoczniejszy toggle (#39), skill `web-design-guidelines` (#40), Faza 6 UX (Wklej przykład / Wyczyść / feedback kopiowania — #41), Faza 7 audyt skillem + fixy a11y/typo/touch (#42). **Następny krok (w osobnej sesji, na życzenie użytkownika):** analiza obecnego UI, rekomendacje i **szczegółowy plan nowej szaty graficznej** (paleta/font/komponenty/szkielet + fazy implementacyjne). **Nie zaczynać kodu przed akceptacją planu** — wyjątek od domyślnego trybu „implementuj i wdroż". Pełny handoff: `docs/HANDOFF.md`.

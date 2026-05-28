@@ -61,3 +61,28 @@
 
 ## Model identity / sekrety
 - Tokeny/klucze tylko w panelu Railway lub sekretach GitHub — nigdy w repo ani w czacie. (W trakcie sesji użytkownik wkleił token Railway w czacie → zalecono rotację; token i tak był bezużyteczny z sandboxa.)
+
+## Cache-busting + no-cache HTML (Faza 5, #37 + #39)
+- **Problem:** użytkownik widział stary UI po deployu, bo przeglądarka cachowała `style.css`/`app.js`. Wymóg „Ctrl+Shift+R" psuł doświadczenie.
+- **Rozwiązanie:**
+  - Helper `_asset_version(path)` w `src/detektor_web/app.py` zwraca `sha1(plik)[:8]` (mtime jako fallback). Wstrzykiwany do szablonu jako `style_v` / `app_v`; w `index.html` osadzony jako `?v=...`. Każda zmiana pliku → nowy hash → nowy URL → świeży pobór.
+  - HTML serwowany endpointem `/` z nagłówkiem `Cache-Control: no-store, max-age=0, must-revalidate` (#39) — gwarantuje, że nowe wartości `?v=...` dotrą natychmiast (bez tego HTML też mógł być cached i utrzymywać stare hashe).
+- **Pułapka:** jeśli ktoś przywróci cache na HTML, użytkownik utknie ze starymi hashami `?v=...` aż przeglądarka zwolni cache.
+
+## Dark mode (Faza 5, #38)
+- **Decyzja:** dwa motywy (light/dark) zarządzane przez atrybut `data-theme` na `<html>`. Tokeny ciemnego motywu w scoped selektorze `:root[data-theme="dark"]`; twarde kolory (marki, chipy, alerty, podgląd, nakładki) nadpisywane scoped w sekcji dark.
+- **Brak FOUC:** inline-skrypt w `<head>` PRZED `<link rel="stylesheet">` ustawia `data-theme` na podstawie `localStorage("theme")` (z fallbackiem do `prefers-color-scheme`). Skrypt MUSI być synchroniczny — w przeciwnym razie pojawia się flash białego ekranu.
+- **`color-scheme: dark`** w `:root[data-theme="dark"]` — naprawia natywne kontrolki (scrollbar, select, inputs) na Windows dark mode.
+- **Toggle**: `#theme-toggle` w topbarze, `aria-pressed`, `:focus-visible`. `applyTheme` (w `app.js`) ustawia `data-theme`, zapisuje `localStorage`, aktualizuje `aria-pressed`. Musi pozostać idempotentne.
+- **Kontrast WCAG AA**: cała ciemna paleta została przeliczona skryptem audytowym (jak w #36); wszystkie pary tekst/tło ≥ 4.5.
+
+## Skill audytu web-design-guidelines (Faza 5/7, #40 + #42)
+- **Decyzja:** dodano `.agents/skills/web-design-guidelines/SKILL.md` (z `vercel-labs/agent-skills`). Skill przed każdym uruchomieniem pobiera świeże **Web Interface Guidelines** z GitHub (`vercel-labs/web-interface-guidelines/main/command.md`) i wykonuje audyt frontu w formacie `file:line - issue`.
+- **Powód:** pojedyncze źródło prawdy dla zasad UI; guidelines są aktualizowane częściej niż projekt — pobieranie na żądanie chroni przed driftem.
+- **Workflow:** uruchomić skill po każdej fazie redesignu; naprawiać findingi pewne/niskiego ryzyka, świadomie odrzucać te o większym koszcie (np. wirtualizacja gdy lista <50, refaktor `<mark>` → `<button>`).
+
+## Faza 7 — a11y/typo/touch baseline (#42)
+- **A11y minima:** każdy nowy widok MUSI mieć — skip-link → `#main`, `<meta name="theme-color">` light/dark, `aria-label` na ikonowych przyciskach (glify w `<span aria-hidden="true">`), `aria-live="polite"` na statusach asynchronicznych, `aria-hidden` na czysto dekoracyjnych elementach. To minimum dla każdej nowej szaty (Faza 8+).
+- **Typografia minima:** `…` (U+2026) zamiast `...` w widocznych tekstach; `font-variant-numeric: tabular-nums` na cyfrach porównywanych/aktualizowanych live (liczniki, wskaźniki, czasy).
+- **Touch minima:** `touch-action: manipulation` w base `button` (eliminacja 300 ms tap-delay iOS) — nie ruszać bez powodu.
+- **Świadomie pominięte i czemu** (do ewentualnego przemyślenia w Fazie 8): wirtualizacja findings (zwykle <50, premature), refaktor `<mark>` → `<button>` (zmienia offsety/styling, klawiatura już działa przez globalne ←/→/Enter), `confirm()` przy „Wyczyść" (może irytować przy szybkiej pracy).
