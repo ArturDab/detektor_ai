@@ -120,26 +120,31 @@
             <div id="notes" class="notes"></div>
             <div id="verdict-sub" class="verdict-sub expand-verdict-sub hidden"></div>
             <div class="scores">
-              <div class="score-card card">
-                <div class="score-head">
-                  <h2>Jakość tekstu</h2>
-                  <span class="score-hint">0 = rzetelny tekst · 100 = czysty „slop"</span>
+              <!-- ScoreCard v2 — Jakość tekstu -->
+              <div class="score-card-v2">
+                <span class="sc-label">Jakość tekstu</span>
+                <div class="sc-number-row">
+                  <span id="sc-num-slop" class="sc-number">—</span>
+                  <span class="sc-denom">/100</span>
                 </div>
-                <div id="gauge-slop" class="gauge-wrap"></div>
-                <div id="band-slop" class="band"></div>
+                <div class="sc-bar-track">
+                  <div id="sc-bar-slop" class="sc-bar-fill" data-level="ok" style="width:0%"></div>
+                </div>
+                <span id="band-slop" class="band"></span>
                 <details class="details">
                   <summary>Szczegóły oceny</summary>
                   <div id="conf-slop" class="conf"></div>
                   <div id="break-slop" class="breakdown"></div>
                 </details>
               </div>
-              <div class="score-card card">
-                <div class="score-head">
-                  <h2>Sygnał autorstwa AI</h2>
-                  <span class="score-hint">0 = raczej człowiek · 100 = raczej AI</span>
+              <!-- AIIndicator — segmented bar -->
+              <div class="ai-indicator">
+                <span class="ai-label">Sygnał autorstwa AI</span>
+                <div class="ai-bar-row">
+                  <div id="ai-segments" class="ai-segments"></div>
+                  <span id="ai-value" class="ai-value">—</span>
                 </div>
-                <div id="gauge-ai" class="gauge-wrap"></div>
-                <div id="band-ai" class="band"></div>
+                <span id="band-ai" class="ai-qual band"></span>
                 <details class="details">
                   <summary>Szczegóły oceny</summary>
                   <div id="conf-ai" class="conf"></div>
@@ -151,7 +156,7 @@
             <div id="llm-explanation" class="llm-box hidden"></div>
             <div class="exp-panel">
               <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
-              <div id="dimensions" class="dimensions">Brak danych z LLM (tryb heurystyczny).</div>
+              <div id="dimensions" class="dimension-list">Brak danych z LLM (tryb heurystyczny).</div>
             </div>
           </div>
         </div>

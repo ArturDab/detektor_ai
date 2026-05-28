@@ -216,9 +216,11 @@ function renderDimensions(dimensions) {
     .map((k) => {
       const v = dimensions[k];
       const label = DIM_LABEL[k] || k;
-      return `<div class="dim-row"><span>${escapeHtml(label)}</span>
-        <span class="dim-bar"><span class="dim-fill" style="width:${v}%"></span></span>
-        <span>${v}</span></div>`;
+      return `<div class="dimension-row">
+        <span class="dim-label">${escapeHtml(label)}</span>
+        <div class="dim-bar-track"><div class="dim-bar-fill" style="width:${v}%"></div></div>
+        <span class="dim-value">${v}</span>
+      </div>`;
     })
     .join("");
 }
@@ -302,13 +304,30 @@ function renderScores(r) {
   aiNum.textContent = r.ai_provenance.score.toFixed(0);
   aiNum.style.color = colorFor(r.ai_provenance.score).trim();
 
-  // Full gauges in expand section
-  $("gauge-slop").innerHTML = gauge(r.slop.score);
+  // ScoreCard v2 — slop
+  const scNum = $("sc-num-slop");
+  if (scNum) {
+    scNum.textContent = r.slop.score.toFixed(0);
+    scNum.style.color = colorFor(r.slop.score).trim();
+    const fill = $("sc-bar-slop");
+    fill.style.width = `${r.slop.score}%`;
+    fill.dataset.level = r.slop.score < 33 ? "ok" : r.slop.score < 66 ? "warn" : "bad";
+  }
   $("band-slop").textContent = bandSlop(r.slop.score);
   $("conf-slop").textContent = `pewność: ${(r.slop.confidence * 100).toFixed(0)}%`;
   $("break-slop").innerHTML = breakdownHtml(r.slop.breakdown);
 
-  $("gauge-ai").innerHTML = gauge(r.ai_provenance.score);
+  // AIIndicator — segmented bar
+  const aiSegs = $("ai-segments");
+  if (aiSegs) {
+    const s = r.ai_provenance.score;
+    const n = Math.round(s / 10);
+    const cls = s < 33 ? "active-low" : s < 66 ? "active-medium" : "active-high";
+    aiSegs.innerHTML = Array.from({ length: 10 }, (_, i) =>
+      `<span class="ai-seg${i < n ? ` ${cls}` : ""}"></span>`
+    ).join("");
+    $("ai-value").textContent = `${s.toFixed(0)} / 100`;
+  }
   $("band-ai").textContent = bandAi(r.ai_provenance.score);
   $("conf-ai").textContent = `pewność: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
   $("break-ai").innerHTML = breakdownHtml(r.ai_provenance.breakdown);
