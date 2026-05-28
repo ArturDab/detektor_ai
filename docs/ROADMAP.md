@@ -80,6 +80,66 @@ Fundamenty (layout, JS, offsety) bez zmian; każdy etap = osobny PR → `main`.
 > Weryfikacja wizualna dark (kontrast policzony, ale render lokalnie niemożliwy
 > — brak Chromium) do potwierdzenia na produkcji po deployu #38.
 
+### Faza 6 — Drobne UX (ZREALIZOWANA, #41)
+- [x] Przyciski "Wklej przykład" / "Wyczyść" w nagłówku panelu tekstu.
+- [x] `EXAMPLE_TEXT` w `app.js` (przykład PL).
+- [x] `copyAll` z feedbackiem inline "Skopiowano ✓" (revert po 1.8 s).
+
+### Faza 7 — Audyt web-design-guidelines (ZREALIZOWANA, #42)
+- [x] A11y: skip-link "Przejdź do treści" → `#main`, `aria-label` na nav-prev/next/textarea/select, `aria-live="polite"` na statusach, `aria-hidden` na dekoracyjnej ikonie, `<meta name="theme-color">` light/dark.
+- [x] Typografia: `…` zamiast `...` w placeholderze i "Analizuję…", `font-variant-numeric: tabular-nums` dla cyfr.
+- [x] Interakcja: `touch-action: manipulation` w base `button` (eliminacja 300 ms tap-delay iOS).
+
+---
+
+## Faza 8 — REWOLUCJA GRAFICZNA (NOWY KIERUNEK)
+
+**Zmiana kierunku po Fazie 7.** Material 3 + jasny błękit z Faz 1-7 to fundament — dobry, ale ograniczony charakter ("dashboard" zamiast "asystent piszący"). User zdecydował o **pełnej rewolucji**: nowa paleta (akcent zielony), nowy szkielet, nowy system komponentów, redesign wskaźników.
+
+**Benchmark:** Grammarly (jedyny — 4 screeny od usera, opisy w `docs/DESIGN_SPEC.md` §13).
+
+**Źródło prawdy:** [`docs/DESIGN_SPEC.md`](DESIGN_SPEC.md) — pełny spec (paleta light/dark, typografia, spacing, radius, elevation, motion, 15 komponentów, szkielet layoutu, matryca stanów). Faza 8.0 produkuje ten dokument; Fazy 8.1-8.9 to jego implementacja.
+
+**Zostaje:** font Geist (sans + mono), mechanizm `[data-theme]` + `localStorage` + `<meta name="theme-color">`, semantyka HTML (skip-link, `aria-live`, role), helper `_asset_version` (cache-busting), `Cache-Control: no-store` na HTML.
+
+**Nie ruszamy:** backend (heurystyki, LLM, endpointy, payloads), mechanika offsetów (`applyReplacement`, sync `<mark data-idx>` ↔ `CURRENT.findings`, `formatRichHtml`, `refreshScores`).
+
+### Faza 8.0 — Research + Design Spec (W TOKU — ten PR)
+- [x] Decyzje projektowe podjęte (zakres, benchmark, fundamenty, strefy zakazane).
+- [x] `docs/DESIGN_SPEC.md` napisany (paleta, typografia, spacing, komponenty, szkielet).
+- [x] `docs/design/screenshots/README.md` — placeholdery na PNG od usera.
+- [ ] User wrzuca PNG screeny do `docs/design/screenshots/` po merge.
+- [ ] User potwierdza akcent zielony (`#10894e`) lub proponuje alternatywę.
+
+### Faza 8.1 — Tokeny + reset CSS
+Wymiana fundamentu CSS: nowe `:root` + `[data-theme="dark"]` zgodnie ze spec. Stare nazwy zmiennych jako aliasy mapowane na nowe wartości (kompatybilność). Reset/normalize.
+
+### Faza 8.2 — Layout / szkielet
+Nowy grid (header + main 2-col), proporcje editor ~62% / sidebar ~38%, breakpointy ≥1280 / 960-1279 / <960 (best-effort). Sticky sidebar, semantyka `<header>`/`<main>`/`<aside>`.
+
+### Faza 8.3 — Komponenty bazowe + typografia
+`Button` (primary pill, secondary, ghost, icon × 3 rozmiary), `Input/Textarea`, `Select` (styled native), `Card`, `Badge`, `Popover` (skorupa + arrow + animacja), `Toast` (utility `showToast()` w app.js). Skala typograficzna podpięta globalnie.
+
+### Faza 8.4 — Editor (lewa kolumna)
+Nowy wygląd textarea (focus, placeholder, licznik znaków), spinner-overlay, `view`-mode (podświetlony tekst). `<mark>` w nowej kolorystyce severity. **Nie ruszamy** `setLeftMode`/`renderHighlighted`/`formatRichHtml` jako logiki.
+
+### Faza 8.5 — Sidebar wyników (prawa kolumna)
+Nowa hierarchia: controls → scores → findings → nav. Skorupa komponentów (treść w 8.6/8.7).
+
+### Faza 8.6 — Wskaźniki (slop + AI provenance)
+`ScoreCard` (slop = wiodący "writing score", duża liczba + progress bar — inspiracja Grammarly Writing quality 98/100). `AIIndicator` = osobny artefakt (segmented bar 5 segmentów + label jakościowy "Prawdopodobnie AI") — wyraźnie różny od ScoreCard. `DimensionRow` per wymiar z LLM.
+
+### Faza 8.7 — Findings + propozycje + popover
+Redesign listy findings + popovera (3 propozycje + custom input + diff inline token-level orig→sugg). **Najbardziej delikatna faza** — sync `<mark data-idx>` ↔ `CURRENT.findings` musi działać identycznie.
+
+### Faza 8.8 — Motion + micro-interakcje + a11y polish
+Tranzycje hover/focus, animacja popovera, fade-in podświetleń, mark flash po apply, focus-trap w popoverze, klawiatura w liście findings, `aria-live` po `refreshScores`. `prefers-reduced-motion` respect.
+
+### Faza 8.9 — Audyt + fix
+Run `.agents/skills/web-design-guidelines` na produkcji, fix znalezisk, finalny przegląd kontrastów na realnych PL (z `ą/ę/ż`), Lighthouse, removal aliasów ze starych nazw tokenów.
+
+---
+
 ## Decyzje (USTALONE z użytkownikiem)
 1. **Paleta: jasny błękit + struktura M3.** (AKTUALIZACJA #34 — wcześniej
    neutralny monochrom.) Primary `#2563eb` (vivid blue), powierzchnie z
