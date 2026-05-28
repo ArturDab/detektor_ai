@@ -1581,3 +1581,223 @@ input[type="checkbox"]:focus-visible,
   100% { transform: scale(1); }
 }
 .score-pop { animation: scorePop 280ms var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)); }
+
+/* ════════════════════════════════════════════════════════════
+   FAZA 9 — REDESIGN „ASYSTENT PISZĄCY" (Grammarly-like)
+   Centrowany dokument-scena · pływające karty · okrągły gauge.
+   Warstwa wizualna; struktura HTML/JS/ID bez zmian funkcjonalnych.
+   ════════════════════════════════════════════════════════════ */
+
+:root {
+  --page-bg:     var(--color-surface-2);
+  --card-bg:     var(--color-surface-base);
+  --gauge-track: var(--color-surface-3);
+}
+:root[data-theme="dark"] {
+  --page-bg:     var(--color-surface-base);
+  --card-bg:     var(--color-surface-2);
+  --gauge-track: #2e3340;
+}
+
+/* — Tło strony: dokument staje się „papierem" na delikatnym tle — */
+body { background: var(--page-bg); }
+.layout { max-width: 1200px; }
+.two-col { gap: 28px; }
+
+/* — Topbar: lekki, półprzezroczysty — */
+.topbar {
+  background: color-mix(in srgb, var(--card-bg) 85%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+}
+
+/* — Dokument (lewa kolumna): papier z głębią — */
+.card { background: var(--card-bg); }
+.text-pane.card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+}
+.text-pane-head { background: transparent; }
+.text-box textarea,
+.text-box .highlighted,
+.highlighted { background: var(--card-bg); }
+.text-box textarea:focus { background: var(--card-bg); }
+.text-box textarea,
+.text-box .highlighted { padding: 32px 44px; }
+.highlighted .hl-p,
+.highlighted .hl-ul,
+.highlighted .hl-ol { max-width: 68ch; }
+.text-footer { background: transparent; }
+
+/* — Prawa kolumna = transparentny rail z pływającymi kartami — */
+.col-right {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  width: 392px;
+}
+.rail-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+.sidebar-controls.rail-card { padding: 16px; }
+
+/* — Score hero: okrągły gauge jakości — */
+.score-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 18px 18px;
+  text-align: center;
+}
+.gauge {
+  --pct: 0;
+  --gauge-color: var(--accent);
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: conic-gradient(var(--gauge-color) calc(var(--pct) * 3.6deg), var(--gauge-track) 0);
+  transition: background 0.55s var(--ease-out);
+}
+.gauge::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  background: var(--card-bg);
+}
+.gauge-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+.gauge-num {
+  font-size: 3.1rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--gauge-color);
+  font-variant-numeric: tabular-nums;
+}
+.gauge-cap {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--muted);
+  margin-top: 7px;
+}
+
+.hero-stats { display: flex; gap: 10px; width: 100%; }
+.hero-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 9px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.hero-stat .bar-score-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hero-stat .bar-score-lbl {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.score-hero .abar-verdict {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.92rem;
+}
+.score-hero .verdict-headline {
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.45;
+}
+.score-hero .abar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* — Findings: pływające karty z akcentem severity — */
+.proposals-panel { background: transparent; border: none; box-shadow: none; padding: 0; }
+.proposals-head { padding: 2px 4px 0; }
+.proposals-head h3 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+  margin: 0;
+}
+.findings { display: flex; flex-direction: column; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.findings .finding {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: box-shadow var(--dur-base) var(--ease-out),
+              transform var(--dur-base) var(--ease-out),
+              border-color var(--dur-base) var(--ease-out);
+}
+.findings .finding:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.findings .finding.sev-high   { border-left-color: var(--color-sev-high-border); }
+.findings .finding.sev-medium { border-left-color: var(--color-sev-medium-border); }
+.findings .finding.sev-low,
+.findings .finding.sev-info   { border-left-color: var(--color-sev-low-border); }
+.findings .finding.active {
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  box-shadow: var(--ring), var(--shadow);
+  transform: translateY(-1px);
+}
+.findings .finding-empty {
+  cursor: default;
+  border-left-color: var(--border);
+  color: var(--muted);
+  text-align: center;
+}
+.findings .finding-empty:hover { transform: none; box-shadow: var(--shadow-sm); }
+
+/* — finding-nav jako pasek-karta — */
+#finding-nav.rail-card { padding: 10px 12px; align-items: center; }
+
+/* — empty state jako karta — */
+.proposals-empty.rail-card { padding: 28px 22px; }
+
+/* — Mobile: rail wraca na pełną szerokość, gauge nieco mniejszy — */
+@media (max-width: 959px) {
+  .col-right { width: 100%; }
+  .two-col { gap: 16px; }
+  .text-box textarea,
+  .text-box .highlighted { padding: 20px 22px; }
+  .gauge { width: 132px; height: 132px; }
+  .gauge-num { font-size: 2.7rem; }
+}

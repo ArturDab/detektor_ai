@@ -290,6 +290,17 @@ function renderScores(r) {
   aiNum.textContent = r.ai_provenance.score.toFixed(0);
   aiNum.style.color = colorFor(r.ai_provenance.score).trim();
 
+  // Gauge jakości (Grammarly-like): jakość = 100 − slop. Wysoka = zielona.
+  const quality = Math.max(0, Math.min(100, Math.round(100 - r.slop.score)));
+  const gNum = $("gauge-num");
+  if (gNum) gNum.textContent = String(quality);
+  const gauge = document.querySelector(".gauge");
+  if (gauge) {
+    gauge.style.setProperty("--pct", String(quality));
+    gauge.style.setProperty("--gauge-color", colorFor(r.slop.score).trim());
+    gauge.dataset.level = r.slop.score < 33 ? "ok" : r.slop.score < 66 ? "warn" : "bad";
+  }
+
   // ScoreCard v2 — slop
   const scNum = $("sc-num-slop");
   if (scNum) {
@@ -494,7 +505,7 @@ function applyReplacement(idx, replacement) {
 }
 
 function triggerScorePop() {
-  ["sc-num-slop", "bar-num-slop", "ai-value", "bar-num-ai"].forEach((id) => {
+  ["gauge-num", "sc-num-slop", "bar-num-slop", "ai-value", "bar-num-ai"].forEach((id) => {
     const el = $(id);
     if (!el) return;
     el.classList.remove("score-pop");

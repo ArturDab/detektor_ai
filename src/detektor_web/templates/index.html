@@ -79,7 +79,7 @@
       <div class="col-right">
 
         <!-- ControlsCard — zawsze widoczny -->
-        <div class="sidebar-controls">
+        <div class="sidebar-controls rail-card">
           <div class="sc-row">
             <button id="analyze">Analizuj</button>
             <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
@@ -90,16 +90,21 @@
         </div>
 
         <!-- Wyniki analizy — pokazywane po analizie -->
-        <div id="abar-results" class="abar-results hidden">
-          <div class="abar-scores">
-            <div class="abar-score">
+        <div id="abar-results" class="rail-card score-hero hidden">
+          <div class="gauge" data-level="ok" role="img" aria-label="Ocena jakości pisania">
+            <div class="gauge-inner">
+              <span id="gauge-num" class="gauge-num">—</span>
+              <span class="gauge-cap">jakość · /100</span>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
               <span id="bar-num-slop" class="bar-score-num">—</span>
               <span class="bar-score-lbl">Slop</span>
             </div>
-            <div class="abar-score-divider"></div>
-            <div class="abar-score">
+            <div class="hero-stat">
               <span id="bar-num-ai" class="bar-score-num">—</span>
-              <span class="bar-score-lbl">AI</span>
+              <span class="bar-score-lbl">Sygnał AI</span>
             </div>
           </div>
           <div id="abar-verdict" class="abar-verdict">
@@ -114,7 +119,7 @@
         </div>
 
         <!-- Rozwijane szczegóły: pełne gauge, sub-werdykt, LLM, wymiary -->
-        <div id="analysis-expand" class="analysis-expand hidden">
+        <div id="analysis-expand" class="rail-card analysis-expand hidden">
           <div class="expand-inner">
             <div id="llm-error" class="alert alert-error hidden"></div>
             <div id="notes" class="notes"></div>
@@ -162,7 +167,7 @@
         </div>
 
         <!-- Nawigacja po fragmentach -->
-        <div id="finding-nav" class="finding-nav" style="display:none">
+        <div id="finding-nav" class="rail-card finding-nav" style="display:none">
           <button id="nav-prev" class="nav-btn" aria-label="Poprzedni fragment" title="Poprzedni fragment (←)"><span aria-hidden="true">&#8592;</span></button>
           <span id="nav-pos" class="nav-pos">0 / 0</span>
           <button id="nav-next" class="nav-btn" aria-label="Następny fragment" title="Następny fragment (→)"><span aria-hidden="true">&#8594;</span></button>
@@ -172,7 +177,7 @@
         </div>
 
         <!-- Empty state (przed analizą) -->
-        <div id="proposals-empty" class="proposals-empty">
+        <div id="proposals-empty" class="rail-card proposals-empty">
           <div class="empty-icon" aria-hidden="true">✦</div>
           <p class="empty-title">Gotowy do analizy</p>
           <p class="empty-body">Wklej tekst w lewym oknie i kliknij <strong>Analizuj</strong>, aby zobaczyć propozycje zmian.</p>
