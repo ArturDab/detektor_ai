@@ -36,7 +36,11 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-3.1-pro-preview"
     enable_llm: bool = True
-    llm_timeout_s: float = 20.0
+    # Timeout sedziego LLM. Modele Pro (np. gemini-3.1-pro-preview) maja wysoka
+    # latencje przy strukturalnym JSON na calym artykule — 20 s bywalo za malo
+    # i zwracalo TimeoutError. 45 s daje komfortowy zapas dla wolnych modeli Pro,
+    # zachowujac graceful degradation do heurystyk po przekroczeniu.
+    llm_timeout_s: float = 45.0
     llm_max_retries: int = 1
     # Humanizacja: timeout na pojedynczy rewrite. Modele Pro maja wysoka latencje,
     # wiec musi byc na tyle duzy, by zdazyly zwrocic propozycje (kosztem dluzszego czekania).

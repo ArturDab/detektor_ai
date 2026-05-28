@@ -1,3 +1,4 @@
+from detektor.heuristics.lexical_diversity import LexicalDiversityAnalyzer
 from detektor.heuristics.punctuation_calque import PunctuationCalqueAnalyzer
 from detektor.heuristics.slop_phrases import SlopPhraseAnalyzer
 from detektor.heuristics.structural import StructuralAnalyzer
@@ -37,3 +38,31 @@ def test_connector_at_sentence_start_flagged():
     doc = segment(txt)
     res = StructuralAnalyzer().analyze(doc)
     assert any(f.label == "connector" for f in res.findings)
+
+
+def test_repeated_proper_name_title_not_flagged():
+    txt = (
+        "Zero Parades to nowa produkcja niezależnego studia z Krakowa. "
+        "Zero Parades opowiada o samotności i pamięci w opuszczonym mieście. "
+        "Zero Parades zostało docenione przez krytyków za odważną narrację. "
+        "Invincible VS pojawi się w tym samym miesiącu na konsolach nowej generacji. "
+        "Invincible VS przyciąga fanów dynamicznymi pojedynkami i bogatą obsadą postaci."
+    )
+    doc = segment(txt)
+    res = LexicalDiversityAnalyzer().analyze(doc)
+    assert not any(f.label == "repeated_opening" for f in res.findings)
+
+
+def test_repeated_slop_opener_still_flagged():
+    txt = (
+        "Należy podkreślić, że technologia zmienia się naprawdę bardzo szybko. "
+        "Należy podkreślić znaczenie regularnego odpoczynku dla naszego zdrowia. "
+        "Należy podkreślić rolę edukacji w rozwoju całego społeczeństwa polskiego. "
+        "Należy podkreślić, że każda firma musi mieć swoją własną stronę internetową."
+    )
+    doc = segment(txt)
+    res = LexicalDiversityAnalyzer().analyze(doc)
+    flagged = [f for f in res.findings if f.label == "repeated_opening"]
+    assert flagged
+    f = flagged[0]
+    assert txt[f.start : f.end].lower().startswith("należy podkreślić")

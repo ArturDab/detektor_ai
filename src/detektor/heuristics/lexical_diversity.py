@@ -13,6 +13,25 @@ from .base import clamp
 _COMMON_OPENERS = {"to", "a", "i", "w", "na", "z", "że", "co", "ale", "oraz", "the"}
 
 
+def _is_capitalized(token: str) -> bool:
+    """Token zaczyna sie od wielkiej litery (pierwszy znak alfabetyczny)."""
+    for ch in token:
+        if ch.isalpha():
+            return ch.isupper()
+    return False
+
+
+def _looks_like_proper_name(toks: list) -> bool:
+    """Para otwierajaca wyglada jak nazwa wlasna/tytul (Title Case oba slowa).
+
+    Powtorzony tytul gry/marki (np. 'Zero Parades', 'Invincible VS',
+    'Mortal Kombat') to nie monotonia, lecz naturalne odwolanie do tematu.
+    Frazesy ('W dzisiejszych czasach', 'Nalezy podkreslic') maja drugie
+    slowo z malej litery, wiec nadal sa wykrywane.
+    """
+    return _is_capitalized(toks[0].text) and _is_capitalized(toks[1].text)
+
+
 class LexicalDiversityAnalyzer:
     name = "lexical_diversity"
 
@@ -68,7 +87,13 @@ class LexicalDiversityAnalyzer:
             groups.setdefault(key, []).append((s, toks))
         repeated = 0
         for key, items in groups.items():
-            if len(items) >= 2 and key[0] not in _COMMON_OPENERS:
+            if key[0] in _COMMON_OPENERS:
+                continue
+            # Pomijamy powtorzone nazwy wlasne/tytuly (Title Case) — to nie
+            # monotonia, lecz naturalne odwolanie do tematu tekstu.
+            if _looks_like_proper_name(items[0][1]):
+                continue
+            if len(items) >= 2:
                 repeated += len(items)
                 for _s, toks in items:
                     findings.append(
