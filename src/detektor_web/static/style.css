@@ -1029,16 +1029,16 @@ mark.mark-active {
 }
 
 @media (max-width: 959px) {
-  .two-col { flex-direction: column; }
-  .col-left { max-width: 100%; }
+  .two-col { flex-direction: column; align-items: stretch; gap: 14px; }
+  .col-left { max-width: 100%; width: 100%; }
   .col-right { width: 100%; flex-shrink: 1; position: static; max-height: none; top: 0; overflow: visible; }
-  .two-col { gap: 14px; }
   .layout { padding-left: 14px; padding-right: 14px; padding-bottom: 48px; }
   .text-box { min-height: 0; }
   .text-box textarea { height: 240px; min-height: 150px; max-height: 55vh; padding: 18px 20px; }
   .text-box .highlighted { min-height: 0; max-height: 70vh; padding: 18px 20px; }
   .text-pane-head { padding: 10px 16px; }
   .text-footer { padding: 6px 16px; min-height: 30px; }
+  .topbar-inner { gap: 12px; }
   .topbar h1 { border-right: none; padding-right: 0; }
   .subtitle { display: none; }
   .expand-inner .scores { grid-template-columns: 1fr; }
