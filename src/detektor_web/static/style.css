@@ -112,7 +112,6 @@
   --elev-popover: 0 4px 12px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.12);
 
   --topbar-h: 56px;
-  --abar-h: 52px; /* updated via JS ResizeObserver */
   color-scheme: light;
 }
 
@@ -390,14 +389,6 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
-.expand-inner .score-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 16px;
-  text-align: center;
-  box-shadow: var(--shadow-sm);
-}
 .exp-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -415,7 +406,6 @@ body {
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
 }
-.exp-panel .dimensions { padding: 14px 18px; }
 .expand-inner .llm-box {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -725,22 +715,6 @@ mark.mark-active {
 /* ═══════════════════════════════════════════
    SCORE CARDS (in expand section)
    ═══════════════════════════════════════════ */
-.score-head { margin-bottom: 6px; }
-.score-card h2 {
-  margin: 0; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
-}
-.score-hint { display: block; color: var(--muted-2); font-size: 11px; margin-top: 3px; }
-.gauge-wrap { display: flex; justify-content: center; margin: 8px 0 2px; }
-.gauge { width: 130px; height: 130px; }
-.g-bg { fill: none; stroke: var(--accent-soft); stroke-width: 10; }
-.g-fg {
-  fill: none; stroke-width: 10; stroke-linecap: round;
-  transform: rotate(-90deg); transform-origin: 60px 60px;
-  transition: stroke-dashoffset 0.6s ease;
-}
-.g-num { fill: var(--text); font-size: 28px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
-.g-cap { fill: var(--muted-2); font-size: 11px; text-anchor: middle; }
 .band { font-weight: 700; margin-top: 4px; font-size: 12.5px; letter-spacing: -0.01em; }
 .details { margin-top: 12px; text-align: left; }
 .details summary {
@@ -770,13 +744,6 @@ mark.mark-active {
   background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
   padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13.5px;
 }
-.dimensions { display: grid; gap: 9px; }
-.dim-row {
-  display: grid; grid-template-columns: 160px 1fr 32px;
-  gap: 8px; align-items: center; font-size: 13px;
-}
-.dim-bar { background: var(--border); border-radius: 999px; height: 5px; overflow: hidden; }
-.dim-fill { height: 100%; background: var(--accent); border-radius: 999px; }
 .muted { color: var(--muted); font-weight: 400; }
 
 /* ═══════════════════════════════════════════
@@ -879,38 +846,6 @@ mark.mark-active {
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
   .toast.toast-exit { animation: none; opacity: 0; }
-}
-
-/* ═══════════════════════════════════════════
-   POPOVER SHELL (8.3 — używane w 8.7)
-   ═══════════════════════════════════════════ */
-.popover {
-  position: fixed;
-  z-index: 500;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 16px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.12);
-  padding: 20px 24px;
-  max-width: 420px;
-  min-width: 280px;
-  animation: popover-enter 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.popover[hidden] { display: none; }
-.popover-arrow {
-  position: absolute;
-  width: 12px; height: 12px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-left: 1px solid var(--border);
-  transform: rotate(45deg);
-}
-@keyframes popover-enter {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .popover { animation: none; }
 }
 
 /* Empty state */
@@ -1105,7 +1040,6 @@ mark.mark-active {
 
 @media (max-width: 600px) {
   .topbar h1 { font-size: 14px; }
-  .abar-controls { gap: 8px; flex-wrap: wrap; height: auto; padding: 8px 0; }
   .model-select { max-width: 100%; }
   .abar-actions { gap: 5px; }
 }
@@ -1124,9 +1058,6 @@ button { border-radius: var(--radius-md, 10px); }
 button:hover { background: var(--accent); box-shadow: var(--shadow-accent), inset 0 0 0 999px rgba(255, 255, 255, 0.10); }
 button:focus-visible { outline: none; box-shadow: var(--shadow-accent), var(--ring); }
 button:active { transform: translateY(1px); box-shadow: var(--shadow-accent), inset 0 0 0 999px rgba(255, 255, 255, 0.16); }
-
-/* Akcja główna „Analizuj" — pill (sygnatura brandu) */
-.abar-controls #analyze { border-radius: 999px; padding: 8px 22px; letter-spacing: -0.01em; }
 
 /* Tonal button (Kopiuj / Humanizuj) — neutralny kontener M3 */
 .btn-secondary { background: var(--accent-soft); color: var(--on-accent-soft); border: 0; border-radius: var(--radius-md, 10px); padding: 8px 16px; box-shadow: none; }
@@ -1378,7 +1309,7 @@ input[type="checkbox"]:focus-visible,
    ============================================================ */
 
 /* Tabular numerals dla liczb (porównywalność, brak skoków szerokości) */
-.word-count, .bar-score-num, .g-num { font-variant-numeric: tabular-nums; }
+.word-count, .bar-score-num { font-variant-numeric: tabular-nums; }
 
 /* Skip-link do treści (a11y) */
 .skip-link {

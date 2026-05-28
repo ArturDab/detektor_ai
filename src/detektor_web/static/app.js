@@ -74,20 +74,6 @@ function bandAi(score) {
   return "Prawdopodobnie AI";
 }
 
-function gauge(score) {
-  const r = 52;
-  const c = 2 * Math.PI * r;
-  const off = c * (1 - score / 100);
-  const color = colorFor(score).trim();
-  return `<svg viewBox="0 0 120 120" class="gauge">
-    <circle cx="60" cy="60" r="${r}" class="g-bg"></circle>
-    <circle cx="60" cy="60" r="${r}" class="g-fg"
-      style="stroke:${color};stroke-dasharray:${c.toFixed(1)};stroke-dashoffset:${off.toFixed(1)}"></circle>
-    <text x="60" y="58" class="g-num">${score.toFixed(0)}</text>
-    <text x="60" y="76" class="g-cap">/100</text>
-  </svg>`;
-}
-
 function renderVerdict(r) {
   const slop = r.slop.score;
   const ai = r.ai_provenance.score;
@@ -838,7 +824,6 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// analysis-bar removed in 8.5 — sidebar controls are now in .col-right
 
 // Word / character count
 (function () {
