@@ -573,15 +573,38 @@ async function copyAll() {
   }
 }
 
+function wordDiff(orig, sugg) {
+  const ow = orig.split(/\s+/);
+  const sw = sugg.split(/\s+/);
+  let p = 0;
+  while (p < ow.length && p < sw.length && ow[p] === sw[p]) p++;
+  let s = 0;
+  while (s < ow.length - p && s < sw.length - p && ow[ow.length - 1 - s] === sw[sw.length - 1 - s]) s++;
+  const prefix   = ow.slice(0, p).join(" ");
+  const removed  = ow.slice(p, s ? ow.length - s : ow.length).join(" ");
+  const inserted = sw.slice(p, s ? sw.length - s : sw.length).join(" ");
+  const suffix   = s ? ow.slice(ow.length - s).join(" ") : "";
+  let html = "";
+  if (prefix)   html += escapeHtml(prefix) + " ";
+  if (removed)  html += `<del class="diff-del">${escapeHtml(removed)}</del> `;
+  if (inserted) html += `<ins class="diff-ins">${escapeHtml(inserted)}</ins>`;
+  if (suffix)   html += " " + escapeHtml(suffix);
+  return html.trim() || escapeHtml(sugg);
+}
+
 function previewHTML(f, proposal) {
   const quote = CURRENT.text.slice(f.start, f.end);
   const ctx =
     f.context ||
-    CURRENT.text.slice(Math.max(0, f.start - 100), Math.min(CURRENT.text.length, f.end + 100));
-  const marked = `<mark class="preview-new">${escapeHtml(proposal)}</mark>`;
+    CURRENT.text.slice(Math.max(0, f.start - 80), Math.min(CURRENT.text.length, f.end + 80));
   const i = ctx.indexOf(quote);
-  if (i < 0) return marked;
-  return escapeHtml(ctx.slice(0, i)) + marked + escapeHtml(ctx.slice(i + quote.length));
+  const diffHtml = wordDiff(quote, proposal);
+  if (i < 0) return `<span class="diff-ins">${escapeHtml(proposal)}</span>`;
+  return (
+    escapeHtml(ctx.slice(0, i)) +
+    `<span class="diff-wrap">${diffHtml}</span>` +
+    escapeHtml(ctx.slice(i + quote.length))
+  );
 }
 
 // Widoczność przycisków „Wklej przykład" / „Wyczyść": tylko w trybie edycji,
