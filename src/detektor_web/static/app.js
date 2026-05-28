@@ -776,10 +776,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Keep --abar-h in sync so col-right sticky top is always correct.
-new ResizeObserver(() => {
-  document.documentElement.style.setProperty("--abar-h", `${$("analysis-bar").offsetHeight}px`);
-}).observe($("analysis-bar"));
+// analysis-bar removed in 8.5 — sidebar controls are now in .col-right
 
 // Word / character count
 (function () {

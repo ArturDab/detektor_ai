@@ -198,37 +198,38 @@ body {
 .subtitle strong { color: var(--text-body); font-weight: 600; }
 
 /* ═══════════════════════════════════════════
-   ANALYSIS BAR — compact sticky toolbar
+   TOPBAR — right side (model select + theme)
    ═══════════════════════════════════════════ */
-.analysis-bar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: var(--topbar-h);
-  z-index: 90;
-  box-shadow: 0 1px 0 var(--border), 0 4px 12px rgba(0, 0, 0, 0.04);
-}
-.abar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-/* Row 1: controls */
-.abar-controls {
+.topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 52px;
-}
-.abar-controls #analyze {
+  gap: 8px;
+  margin-left: auto;
   flex-shrink: 0;
-  padding: 7px 18px;
+}
+.subtitle { display: none; } /* ukryta — topbar-right zajmuje przestrzeń */
+
+/* ControlsCard (sidebar top) */
+.sidebar-controls {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sidebar-controls .sc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sidebar-controls #analyze {
+  padding: 8px 20px;
   font-size: 14px;
   font-weight: 700;
-  border-radius: var(--radius-sm);
-  letter-spacing: -0.02em;
+  border-radius: 999px;
   box-shadow: var(--shadow-accent);
+  letter-spacing: -0.01em;
 }
 
 /* Model select — inline compact */
@@ -293,15 +294,13 @@ body {
   50%       { opacity: 0.35; }
 }
 
-/* Row 2: results */
+/* Results section in sidebar */
 .abar-results {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 52px;
-  border-top: 1px solid var(--border);
-  flex-wrap: nowrap;
-  overflow: hidden;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 /* Score pair: two colored numbers */
@@ -342,7 +341,6 @@ body {
 
 /* Verdict inline */
 .abar-verdict {
-  flex: 1;
   min-width: 0;
   padding: 6px 12px;
   border-radius: var(--radius-sm);
@@ -367,24 +365,22 @@ body {
 .verdict-sub strong { color: var(--text-body); font-weight: 600; }
 .expand-verdict-sub { margin-bottom: 4px; }
 
-/* Actions */
+/* Actions row */
 .abar-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .abar-toggle { white-space: nowrap; }
 
-/* Expandable details */
+/* Expandable details (inside sidebar) */
 .analysis-expand {
   border-top: 1px solid var(--border);
   background: var(--surface-2);
 }
 .expand-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -503,9 +499,9 @@ button.loading::after {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   position: sticky;
-  top: calc(var(--topbar-h) + var(--abar-h) + 12px);
+  top: calc(var(--topbar-h) + 12px);
   align-self: flex-start;
-  max-height: calc(100vh - var(--topbar-h) - var(--abar-h) - 32px);
+  max-height: calc(100vh - var(--topbar-h) - 20px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -538,7 +534,7 @@ button.loading::after {
 .text-box textarea {
   display: block;
   width: 100%;
-  height: calc(100vh - var(--topbar-h) - var(--abar-h) - 150px);
+  height: calc(100vh - var(--topbar-h) - 120px);
   min-height: 320px;
   resize: vertical;
   border: none;
@@ -560,7 +556,7 @@ button.loading::after {
 }
 .text-box .highlighted {
   min-height: 320px;
-  max-height: calc(100vh - var(--topbar-h) - var(--abar-h) - 150px);
+  max-height: calc(100vh - var(--topbar-h) - 120px);
   padding: 24px 40px;     /* must match textarea — visual alignment */
   font-size: 1.0625rem;   /* 17px = font-body-lg */
   line-height: 1.65;

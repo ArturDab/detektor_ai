@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eaf1fd" />
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e131b" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115" />
   <script>
     (function () {
       try {
@@ -30,106 +30,23 @@
   <header class="topbar">
     <div class="topbar-inner">
       <h1><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false"><circle cx="13" cy="13" r="8" stroke="currentColor" stroke-width="2.5"/><circle cx="13" cy="13" r="2.5" fill="currentColor"/><path d="M19 19L27 27" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>Detektor AI slop <span class="pl">PL</span></h1>
-      <p class="subtitle">
-        Wklej polski tekst, a narzędzie oceni jego <strong>jakość</strong> (ile w nim
-        „lania wody") oraz <strong>prawdopodobieństwo, że napisała go AI</strong>.
-        To dwie niezależne osie — dobry tekst też bywa pisany przez AI, a słaby przez człowieka.
-      </p>
-      <button
-        id="theme-toggle"
-        type="button"
-        aria-label="Przełącz motyw (jasny/ciemny)"
-        title="Przełącz motyw (jasny/ciemny)"
-        aria-pressed="false"
-      ></button>
+      <div class="topbar-right">
+        <select id="model-select" class="model-select" aria-label="Model LLM" title="Model LLM"></select>
+        <button
+          id="theme-toggle"
+          type="button"
+          aria-label="Przełącz motyw (jasny/ciemny)"
+          title="Przełącz motyw (jasny/ciemny)"
+          aria-pressed="false"
+        ></button>
+      </div>
     </div>
   </header>
 
-  <!-- ═══ Analysis bar ═══ -->
-  <div id="analysis-bar" class="analysis-bar">
-    <div class="abar-inner">
-
-      <!-- Row 1: controls — always visible -->
-      <div class="abar-controls">
-        <button id="analyze">Analizuj</button>
-        <select id="model-select" class="model-select" aria-label="Model LLM" title="Model LLM"></select>
-        <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
-          <input type="checkbox" id="with-humanize" /> Z propozycjami
-        </label>
-        <span id="status" class="status" aria-live="polite"></span>
-      </div>
-
-      <!-- Row 2: results — shown after analysis -->
-      <div id="abar-results" class="abar-results hidden">
-        <div class="abar-scores">
-          <div class="abar-score">
-            <span id="bar-num-slop" class="bar-score-num">—</span>
-            <span class="bar-score-lbl">Slop</span>
-          </div>
-          <div class="abar-score-divider"></div>
-          <div class="abar-score">
-            <span id="bar-num-ai" class="bar-score-num">—</span>
-            <span class="bar-score-lbl">AI</span>
-          </div>
-        </div>
-        <div id="abar-verdict" class="abar-verdict">
-          <div id="verdict-headline" class="verdict-headline"></div>
-        </div>
-        <div class="abar-actions">
-          <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
-          <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
-          <span id="humanize-status" class="status" aria-live="polite"></span>
-          <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Szczegóły ▾</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Expandable: full scores + sub-verdict + LLM + dimensions -->
-    <div id="analysis-expand" class="analysis-expand hidden">
-      <div class="expand-inner">
-        <div id="llm-error" class="alert alert-error hidden"></div>
-        <div id="notes" class="notes"></div>
-        <div id="verdict-sub" class="verdict-sub expand-verdict-sub hidden"></div>
-        <div class="scores">
-          <div class="score-card card">
-            <div class="score-head">
-              <h2>Jakość tekstu</h2>
-              <span class="score-hint">0 = rzetelny tekst · 100 = czysty „slop"</span>
-            </div>
-            <div id="gauge-slop" class="gauge-wrap"></div>
-            <div id="band-slop" class="band"></div>
-            <details class="details">
-              <summary>Szczegóły oceny</summary>
-              <div id="conf-slop" class="conf"></div>
-              <div id="break-slop" class="breakdown"></div>
-            </details>
-          </div>
-          <div class="score-card card">
-            <div class="score-head">
-              <h2>Sygnał autorstwa AI</h2>
-              <span class="score-hint">0 = raczej człowiek · 100 = raczej AI</span>
-            </div>
-            <div id="gauge-ai" class="gauge-wrap"></div>
-            <div id="band-ai" class="band"></div>
-            <details class="details">
-              <summary>Szczegóły oceny</summary>
-              <div id="conf-ai" class="conf"></div>
-              <div id="break-ai" class="breakdown"></div>
-              <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
-            </details>
-          </div>
-        </div>
-        <div id="llm-explanation" class="llm-box hidden"></div>
-        <div class="exp-panel">
-          <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
-          <div id="dimensions" class="dimensions">Brak danych z LLM (tryb heurystyczny).</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <main id="main" class="layout">
     <div class="two-col">
+
+      <!-- ══ LEFT: editor ══ -->
       <div class="col-left">
         <div class="panel card text-pane">
           <div class="text-pane-head">
@@ -158,8 +75,88 @@
         </div>
       </div>
 
+      <!-- ══ RIGHT: sidebar ══ -->
       <div class="col-right">
-        <!-- Navigation bar (visible when findings exist) -->
+
+        <!-- ControlsCard — zawsze widoczny -->
+        <div class="sidebar-controls">
+          <div class="sc-row">
+            <button id="analyze">Analizuj</button>
+            <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
+              <input type="checkbox" id="with-humanize" /> Z propozycjami
+            </label>
+          </div>
+          <span id="status" class="status" aria-live="polite"></span>
+        </div>
+
+        <!-- Wyniki analizy — pokazywane po analizie -->
+        <div id="abar-results" class="abar-results hidden">
+          <div class="abar-scores">
+            <div class="abar-score">
+              <span id="bar-num-slop" class="bar-score-num">—</span>
+              <span class="bar-score-lbl">Slop</span>
+            </div>
+            <div class="abar-score-divider"></div>
+            <div class="abar-score">
+              <span id="bar-num-ai" class="bar-score-num">—</span>
+              <span class="bar-score-lbl">AI</span>
+            </div>
+          </div>
+          <div id="abar-verdict" class="abar-verdict">
+            <div id="verdict-headline" class="verdict-headline"></div>
+          </div>
+          <div class="abar-actions">
+            <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
+            <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
+            <span id="humanize-status" class="status" aria-live="polite"></span>
+            <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Szczegóły ▾</button>
+          </div>
+        </div>
+
+        <!-- Rozwijane szczegóły: pełne gauge, sub-werdykt, LLM, wymiary -->
+        <div id="analysis-expand" class="analysis-expand hidden">
+          <div class="expand-inner">
+            <div id="llm-error" class="alert alert-error hidden"></div>
+            <div id="notes" class="notes"></div>
+            <div id="verdict-sub" class="verdict-sub expand-verdict-sub hidden"></div>
+            <div class="scores">
+              <div class="score-card card">
+                <div class="score-head">
+                  <h2>Jakość tekstu</h2>
+                  <span class="score-hint">0 = rzetelny tekst · 100 = czysty „slop"</span>
+                </div>
+                <div id="gauge-slop" class="gauge-wrap"></div>
+                <div id="band-slop" class="band"></div>
+                <details class="details">
+                  <summary>Szczegóły oceny</summary>
+                  <div id="conf-slop" class="conf"></div>
+                  <div id="break-slop" class="breakdown"></div>
+                </details>
+              </div>
+              <div class="score-card card">
+                <div class="score-head">
+                  <h2>Sygnał autorstwa AI</h2>
+                  <span class="score-hint">0 = raczej człowiek · 100 = raczej AI</span>
+                </div>
+                <div id="gauge-ai" class="gauge-wrap"></div>
+                <div id="band-ai" class="band"></div>
+                <details class="details">
+                  <summary>Szczegóły oceny</summary>
+                  <div id="conf-ai" class="conf"></div>
+                  <div id="break-ai" class="breakdown"></div>
+                  <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
+                </details>
+              </div>
+            </div>
+            <div id="llm-explanation" class="llm-box hidden"></div>
+            <div class="exp-panel">
+              <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
+              <div id="dimensions" class="dimensions">Brak danych z LLM (tryb heurystyczny).</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nawigacja po fragmentach -->
         <div id="finding-nav" class="finding-nav" style="display:none">
           <button id="nav-prev" class="nav-btn" aria-label="Poprzedni fragment" title="Poprzedni fragment (←)"><span aria-hidden="true">&#8592;</span></button>
           <span id="nav-pos" class="nav-pos">0 / 0</span>
@@ -169,7 +166,7 @@
           <button id="load-all-props" class="btn-load-all hidden" title="Załaduj propozycje dla wszystkich fragmentów">Załaduj wszystkie</button>
         </div>
 
-        <!-- Empty state (before analysis) -->
+        <!-- Empty state (przed analizą) -->
         <div id="proposals-empty" class="proposals-empty">
           <div class="empty-icon" aria-hidden="true">✦</div>
           <p class="empty-title">Gotowy do analizy</p>
@@ -182,15 +179,16 @@
           </ul>
         </div>
 
-        <!-- Proposals panel (after analysis) -->
+        <!-- Panel propozycji (po analizie) -->
         <div id="proposals-panel" class="proposals-panel hidden">
           <div class="proposals-head">
             <h3>Propozycje zmian <span id="findings-count" class="muted"></span></h3>
           </div>
           <ul id="findings" class="findings"></ul>
         </div>
-      </div>
-    </div>
+
+      </div><!-- /col-right -->
+    </div><!-- /two-col -->
   </main>
 
   <script src="/static/app.js?v={{ assets['app.js'] }}"></script>
