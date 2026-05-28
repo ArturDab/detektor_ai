@@ -532,10 +532,10 @@ User wrzucił 4 screeny w turze z DESIGN_SPEC.md. Plan: po merge tego PR-a, user
 
 ## 15. Niezamknięte open questions (do dopytania przed kolejnymi fazami)
 
-1. **Akcent zielony** — `#10894e` to mocna decyzja. Alternatywy: niebieski (utrzymanie ciągłości z M3 light), neutralny near-black (Vercel-like), inny zielony bardziej niebieski/oliwkowy. Jeśli user chce inaczej — update w 8.1 przed implementacją.
-2. **Ikon SVG dla logo** — czy potrzebny custom (lupa? mózg? oko?) czy zostaje sam wordmark "detektor_ai"?
-3. **Severity 4 czy 3 poziomy?** Obecny kod ma `high/medium/low/info`. Można scalić `info` z `low`. Decyzja w 8.4 przy redesignie mark.
-4. **Empty state** dla sidebara przed pierwszą analizą — placeholder ilustracja czy sama instrukcja tekstowa? (Grammarly ma AI Chat greeting).
+~~1. **Akcent zielony**~~ — **POTWIERDZONE** `#10894e` (light) / `#34d399` (dark). Wdrożone w Fazie 8.1.
+~~2. **Ikon SVG dla logo**~~ — **WDROŻONE** w Fazie 8.1: lupa (magnifying glass) z centralnym punktem jako SVG inline w `<h1>`. `currentColor` → adaptuje się do motywu (kolor = `var(--accent)`).
+~~3. **Severity 4 czy 3 poziomy?**~~ — **POTWIERDZONE** 3 poziomy: `info` scalony z `low`. Obie klasy (`sev-info`, `sev-low`) mapują na niebieski. Wdrożone w Fazie 8.1 (tokeny) i w 8.4 (wizualne scalenie marks).
+~~4. **Empty state**~~ — **ILUSTRACJA** (user potwierdził). Do projektu w Fazie 8.5 (sidebar).
 5. **Skill audit** — przewidziany po 8.6, 8.7, 8.9; ale można odpalić wcześniej (po 8.1 tokenach).
 
 ---
@@ -589,12 +589,16 @@ Każdy PR Fazy 8.x:
 
 ---
 
-## 19. Lista TODO przed Fazą 8.1
+## 19. Faza 8.1 — zrealizowane (tokeny CSS + logo)
 
-- [ ] User potwierdza akcent zielony (#10894e) lub proponuje inny — open question #1.
-- [ ] User wrzuca PNG screeny do `docs/design/screenshots/grammarly-{01..04}.png` (po merge tego PR-a).
-- [ ] Decyzja o ikonie logo (custom SVG vs sam wordmark).
-- [ ] Update `docs/DECISIONS.md` o decyzję "Faza 8 = rewolucja graficzna, benchmark Grammarly, accent green" (po merge).
+- [x] Akcent zielony `#10894e` (light) / `#34d399` (dark) wdrożony.
+- [x] Logo SVG (lupa z centralnym punktem) inline w `<h1>`, `currentColor`.
+- [x] Severity scalona do 3 poziomów: `sev-info` = `sev-low` (oba niebieski).
+- [x] Nowe canonical tokeny `--color-*`, `--space-*`, `--radius-xs/pill`, `--dur-*`, `--ease-*`.
+- [x] Legacy aliases (`--accent`, `--bg`, `--surface`, ...) zachowane dla kompatybilności reszty CSS.
+- [x] Dark mode: nowe tokeny + dark green accent + ciemne surfaces bez błękitu.
+- [x] Severity w dark mode: `sev-low` zmienione z żółtego na niebieski.
+- [ ] User wrzuca PNG screeny do `docs/design/screenshots/grammarly-{01..04}.png` (pliki nie są dostępne w konwersacji jako pliki — należy ręcznie skopiować do tego katalogu po merge).
 
 ---
 
