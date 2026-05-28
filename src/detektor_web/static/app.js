@@ -575,7 +575,7 @@ async function analyze() {
   if (!text) { $("status").textContent = "Wklej najpierw tekst."; return; }
   $("analyze").disabled = true;
   $("analyze").classList.add("loading");
-  $("status").textContent = "Analizuję...";
+  $("status").textContent = "Analizuję…";
   setLeftMode("loading");
   try {
     const humanize = $("with-humanize").checked;
