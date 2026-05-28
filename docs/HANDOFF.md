@@ -4,6 +4,86 @@
 
 ---
 
+## Sesja: Faza 8.0 + 8.1 — Design Spec + tokeny + logo
+
+**Stan wejściowy:** `main = 39dbe00` (Faza 7).
+**Stan wyjściowy:** `main = 296e8c6` (Faza 8.1 live na Railway).
+**Rozmiar plików:** `style.css` 1226L · `app.js` 811L · `index.html` 198L · `app.py` 181L.
+**Testy:** 34/34 zielone (backend, brak CI na CSS/HTML).
+
+### Co zrobiono
+
+**PR #44 — Faza 8.0 (dokumentacja, zero zmian w src):**
+- `docs/DESIGN_SPEC.md` (19 sekcji) — spec rewolucji: paleta light/dark, typografia (10 ról Geist), spacing 4px-base, radius, elevation, motion, 15 komponentów z anatomią+stanami, szkielet layoutu, matryca stanów, opisy 4 screenów Grammarly z wnioskami.
+- `docs/design/screenshots/README.md` — placeholder; PNG nie ma (screeny były w konwersacji, nie jako pliki).
+- `docs/ROADMAP.md` — Fazy 6/7 (zrealizowane) + sekcja Faza 8 z planem 8.0-8.9.
+
+**PR #45 — Faza 8.1 (style.css + index.html):**
+- **Canonical CSS tokens**: `--color-surface-*` (5), `--color-text-*` (3), `--color-accent-*` (primary + warianty), `--color-sev-*` (3 poziomy × 4 role × light/dark), `--color-success/warning/error/info`, `--space-2..9`, `--radius-xs/pill`, `--dur-fast/base/slow`, `--ease-out/in-out/spring`.
+- **Akcent green**: `#10894e` light / `#34d399` dark. Cascade przez legacy aliasy (`--accent`, `--ring`, `--shadow-accent`, `--accent-soft`, `btn-secondary:hover`, `prop-preview`, `nav-apply`).
+- **Surfaces light**: neutralne bez błękitu (`#f3f4f6` body, `#ffffff` topbar/card).
+- **Dark mode**: surfaces `#0f1115`/`#161922`/`#1f2330`/`#2e3340`, zielony accent `#34d399`.
+- **Severity 3 poziomy** (decyzja usera): `sev-low` = `sev-info` = niebieski; kolory przez canonical tokens.
+- **Logo SVG**: lupa inline w `<h1>` (`currentColor` → zielony/tematyczny automatycznie).
+- Legacy aliasy (`--bg`, `--surface`, `--accent`, `--green`, ...) zachowane — reszta CSS bez zmian.
+
+### Decyzje zamknięte w tej sesji (wszystkie z DESIGN_SPEC.md §14/§15)
+| Pytanie | Decyzja |
+|---|---|
+| Akcent | Zielony `#10894e` light / `#34d399` dark |
+| Logo | Lupa SVG inline w `<h1>` |
+| Severity | 3 poziomy: `sev-info` = `sev-low` = niebieski |
+| Empty state sidebar | Ilustracja (do zaprojektowania w 8.5) |
+| Score 0-100 vs litera | 0-100 |
+| Custom Select vs native | Styled native (a11y for free) |
+| ModelSelect — topbar czy sidebar | Topbar |
+| Mobile <960 | Best-effort |
+| Right icon rail (Grammarly) | Odrzucone v1.0 |
+| Score animation | Tak, `--dur-fast`, `prefers-reduced-motion` |
+| Diff inline w popoverze | Token-level |
+
+### Założenia (niezweryfikowane)
+- ZAŁOŻENIE: wygląd na produkcji (`296e8c6`) poprawny — render lokalny niemożliwy (brak Chromium).
+- ZAŁOŻENIE: `sev-low` poprawnie niebieski na prod (był żółty w M3).
+- ZAŁOŻENIE: dark mode green accent widoczny i czytelny na produkcji.
+
+### Screeny Grammarly
+User wrzucił 4 screeny w rozmowie (opisy w `DESIGN_SPEC.md` §13). Pliki PNG nie są dostępne jako pliki na dysku — nie można zacommittować automatycznie. Do wrzucenia ręcznie do `docs/design/screenshots/` przez użytkownika.
+
+---
+
+### Następna faza: **8.2 — Layout / szkielet** ← START TUTAJ
+
+**Dev branch**: `git checkout -B claude/faza-8-layout origin/main`
+
+**Cel**: Nowy grid zgodny z DESIGN_SPEC.md §11. Bez nowych komponentów wewnątrz — tylko kontenery, sticky, breakpointy. Apka po mergu wciąż działa (stare komponenty w nowych kontenerach).
+
+**Zmiany per spec:**
+- `--topbar-h: 60px` → **56px** (spec mówi 56, current 60).
+- **Topbar** (HTML): aktualnie `[logo h1] [subtitle]`; spec mówi `[logo h1] [spacer] [model-select] [theme-toggle]`. Ale model-select jest teraz w `.abar-controls` — **decyzja w 8.2**: zostawić w `.abar-controls`, przenieść do topbara dopiero w 8.5 razem z redesignem sidebar. Rekomendacja: nie ruszać model-select w 8.2.
+- **Main layout** (CSS): `max-width: 1200px` wrapper → editor pane `flex: 1 / max-width ~820px` + sidebar `width: 380px / sticky top: 56px / max-height: calc(100vh - 56px)`.
+- **Breakpointy**: ≥1280 (full 2 kolumny) / 960-1279 (sidebar 340px) / <960 (stack pionowy, sidebar na górze).
+- **Semantyka** (HTML): obecne `<header class="topbar">` + `<div class="layout">` → upewnienie się że `<main id="main">` istnieje i jest bezpośrednim rodzicem `.two-col`.
+
+**Pliki do zmiany:**
+- `src/detektor_web/static/style.css` — sekcje `.topbar`, `.layout`, `.two-col`, `.col-left`, `.col-right`, media queries.
+- `src/detektor_web/templates/index.html` — ewentualne drobne dopasowania semantyki (sprawdź przez `grep "main\|aside\|col-left\|col-right"` w pliku).
+
+**Pliki do NIE dotykania w 8.2:**
+- `.analysis-bar` i `.abar-*` — to 8.5.
+- `.col-left` / `.col-right` zawartość — to 8.4/8.5.
+- `app.js` — brak zmian.
+- `--abar-h` — zostaje, JS go czyta przez ResizeObserver.
+
+**Kluczowe ostrzeżenie:** Sidebar z `overflow-y: auto` (scroll) + popover `position: absolute` → popover zostanie obcięty przez `overflow: hidden/auto` na scrollującym kontenerze. W 8.2 **nie dodawaj** `overflow-y: auto` ani `overflow: hidden` na `.col-right`. Sidebar scrolluje całą stroną (naturalny scroll) do 8.4/8.7 gdzie popover zmieni się na `position: fixed`.
+
+**Weryfikacja po 8.2:**
+1. `node --check src/detektor_web/static/app.js`
+2. Serwer lokalny: `PYTHONPATH=src .venv/bin/uvicorn detektor_web.app:app --reload` + `GET /healthz`
+3. Deploy → Railway → sprawdź na prod że proporcje kolumn OK i sidebar sticky.
+
+---
+
 ## Sesja: Start Fazy 8 — rewolucja graficzna (Grammarly benchmark)
 
 **Stan na początek sesji:** `main = 39dbe00` (Faza 7 zamknięta, deploy SUCCESS na produkcji), 34/34 testów zielone, ruff czysto, dark mode działa, a11y baseline po audycie skillem.
