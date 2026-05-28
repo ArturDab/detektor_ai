@@ -524,13 +524,14 @@ button.loading::after {
   resize: vertical;
   border: none;
   border-radius: 0;
-  padding: 20px 24px;
-  font-size: 15px;
+  padding: 24px 40px;     /* space-7 / space-9 */
+  font-size: 1.0625rem;   /* 17px = font-body-lg */
   font-family: inherit;
   color: var(--text-body);
   background: transparent;
-  line-height: 1.85;
+  line-height: 1.65;
   transition: box-shadow 0.15s;
+  text-wrap: pretty;
 }
 .text-box textarea::placeholder { color: var(--muted-2); }
 .text-box textarea:focus {
@@ -541,13 +542,16 @@ button.loading::after {
 .text-box .highlighted {
   min-height: 320px;
   max-height: calc(100vh - var(--topbar-h) - var(--abar-h) - 150px);
+  padding: 24px 40px;     /* must match textarea — visual alignment */
+  font-size: 1.0625rem;   /* 17px = font-body-lg */
+  line-height: 1.65;
 }
 .text-loader {
   position: absolute; inset: 0; z-index: 5;
   display: flex; flex-direction: column; gap: 14px;
   align-items: center; justify-content: center;
-  background: rgba(248,250,252,0.45);
-  backdrop-filter: blur(1.5px);
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(2px);
 }
 .text-loader .loader-cap,
 .text-loader .spinner-lg { position: relative; }
@@ -588,10 +592,11 @@ button.loading::after {
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .word-count {
-  font-size: 12px;
+  font-size: 0.8125rem;   /* 13px = caption */
   color: var(--muted-2);
   font-family: var(--font-mono);
   letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ═══════════════════════════════════════════
@@ -600,17 +605,18 @@ button.loading::after {
 .highlighted {
   background: var(--surface);
   border: none;
-  padding: 28px 30px;
+  padding: 24px 40px;     /* matches .text-box textarea — visual alignment */
   white-space: normal;
   word-wrap: break-word;
   overflow-y: auto;
-  font-size: 16px;
-  line-height: 1.85;
+  font-size: 1.0625rem;   /* 17px = font-body-lg */
+  line-height: 1.65;
   color: var(--text-body);
 }
 .highlighted .hl-p {
-  margin: 0 0 1.1em;
+  margin: 0 0 1.2em;
   max-width: 72ch;
+  line-height: 1.65;
 }
 .highlighted .hl-p:last-child { margin-bottom: 0; }
 .highlighted .hl-h1 {
@@ -638,12 +644,52 @@ button.loading::after {
 .highlighted .hl-ul { list-style: disc; }
 .highlighted .hl-ol { list-style: decimal; }
 
-mark { border-radius: 3px; padding: 1px 3px; color: var(--text-body); cursor: pointer; }
+mark {
+  border-radius: 3px;
+  padding: 1px 3px;
+  color: var(--text-body);
+  cursor: pointer;
+  text-decoration-skip-ink: none;
+}
 mark:hover { filter: brightness(0.93); }
-.sev-high   { background: var(--color-sev-high-mark);   border-bottom: 2px solid var(--color-sev-high-border); }
-.sev-medium { background: var(--color-sev-medium-mark); border-bottom: 2px solid var(--color-sev-medium-border); }
-.sev-low    { background: var(--color-sev-low-mark);    border-bottom: 2px solid var(--color-sev-low-border); }
-.sev-info   { background: var(--color-sev-info-mark);   border-bottom: 2px solid var(--color-sev-info-border); }
+
+/* sev-high: czerwony, mark-bg + wavy underline */
+.sev-high {
+  background: var(--color-sev-high-mark);
+  text-decoration: underline var(--color-sev-high-border) wavy 2px;
+  border-bottom: none;
+}
+/* sev-medium: bursztynowy, mark-bg + solid underline */
+.sev-medium {
+  background: var(--color-sev-medium-mark);
+  text-decoration: underline var(--color-sev-medium-border) solid 2px;
+  border-bottom: none;
+}
+/* sev-low: niebieski, mark-bg + dotted underline */
+.sev-low {
+  background: var(--color-sev-low-mark);
+  text-decoration: underline var(--color-sev-low-border) dotted 1px;
+  border-bottom: none;
+}
+/* sev-info: fioletowy, BEZ mark-bg, tylko underline */
+.sev-info {
+  background: transparent;
+  text-decoration: underline var(--color-sev-info-border) solid 1px;
+  border-bottom: none;
+}
+
+/* Flash po applyReplacement (8.4 — trigger JS w 8.8) */
+mark.mark-applied {
+  animation: mark-flash 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes mark-flash {
+  0%   { background: var(--accent-soft, #dffaee); }
+  60%  { background: var(--accent-soft, #dffaee); }
+  100% { background: inherit; }
+}
+@media (prefers-reduced-motion: reduce) {
+  mark.mark-applied { animation: none; }
+}
 
 /* Aktywna marka (po kliknięciu/nawigacji) — mocny błękitny akcent */
 mark.mark-active {
