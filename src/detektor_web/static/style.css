@@ -1801,3 +1801,100 @@ body { background: var(--page-bg); }
   .gauge { width: 132px; height: 132px; }
   .gauge-num { font-size: 2.7rem; }
 }
+
+/* ════════════════════════════════════════════════════════════
+   FAZA 9.1 — POLISH: podświetlenia jak Grammarly + karty propozycji
+   ════════════════════════════════════════════════════════════ */
+
+/* — Podświetlenia w dokumencie: czyste kolorowe podkreślenie,
+     tło dopiero na hover/active (sygnatura Grammarly) — */
+#highlighted mark {
+  background: transparent;
+  border-bottom: none;
+  border-radius: 3px;
+  padding: 0 1px;
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+#highlighted mark.sev-high   { text-decoration-color: var(--color-sev-high-fg);   text-decoration-style: wavy; }
+#highlighted mark.sev-medium { text-decoration-color: var(--color-sev-medium-fg); text-decoration-style: solid; }
+#highlighted mark.sev-low    { text-decoration-color: var(--color-sev-low-fg);    text-decoration-style: solid; text-decoration-thickness: 1.5px; }
+#highlighted mark.sev-info   { text-decoration-color: var(--color-sev-info-fg);   text-decoration-style: dotted; }
+#highlighted mark:hover            { background: var(--surface-2); }
+#highlighted mark.sev-high:hover   { background: var(--color-sev-high-bg); }
+#highlighted mark.sev-medium:hover { background: var(--color-sev-medium-bg); }
+#highlighted mark.sev-low:hover    { background: var(--color-sev-low-bg); }
+#highlighted mark.sev-info:hover   { background: var(--color-sev-info-bg); }
+#highlighted mark.mark-active {
+  background: var(--accent-soft);
+  outline: none;
+  box-shadow: none;
+  border-radius: 4px;
+  text-decoration-color: var(--accent);
+}
+
+/* — Severity-dot w nagłówku karty propozycji — */
+.findings .finding .finding-head::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--border-strong);
+}
+.findings .finding.sev-high   .finding-head::before { background: var(--color-sev-high-fg); }
+.findings .finding.sev-medium .finding-head::before { background: var(--color-sev-medium-fg); }
+.findings .finding.sev-low    .finding-head::before,
+.findings .finding.sev-info   .finding-head::before { background: var(--color-sev-low-fg); }
+.findings .finding-empty .finding-head::before { display: none; }
+
+/* — Karta propozycji: typografia — */
+.findings .finding-msg { font-size: 0.9rem; line-height: 1.55; }
+.findings .finding .quote {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-weight: 600;
+}
+.findings .finding.active .quote { background: var(--surface-2); }
+
+/* — Propozycje jako „accept-chipy" — */
+.findings .props { gap: 7px; }
+.findings .prop-opt {
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--on-accent-soft);
+  border: 1px solid var(--accent-soft-border);
+  padding: 6px 13px;
+  font-weight: 600;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+.findings .prop-opt:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* — Podgląd diff: neutralne tło, zielony „ins" się wyróżnia — */
+.findings .prop-preview {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* — Nagłówek listy propozycji + regen/bulk jako lekkie linki — */
+.findings .regen-btn {
+  margin-top: 10px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  font-weight: 500;
+}
+.findings .regen-btn:hover { background: var(--surface-2); color: var(--text-body); }
