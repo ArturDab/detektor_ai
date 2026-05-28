@@ -495,7 +495,26 @@ function applyReplacement(idx, replacement) {
   renderFindings(CURRENT.findings);
   updateNav();
   refreshScores();
-  if (ACTIVE_IDX >= 0) setTimeout(() => scrollToFinding(ACTIVE_IDX), 80);
+  if (ACTIVE_IDX >= 0) {
+    setTimeout(() => {
+      scrollToFinding(ACTIVE_IDX);
+      const nextMark = document.querySelector(`mark[data-idx="${ACTIVE_IDX}"]`);
+      if (nextMark) {
+        nextMark.classList.add("mark-applied");
+        setTimeout(() => nextMark.classList.remove("mark-applied"), 650);
+      }
+    }, 80);
+  }
+}
+
+function triggerScorePop() {
+  ["sc-num-slop", "bar-num-slop", "ai-value", "bar-num-ai"].forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.classList.remove("score-pop");
+    void el.offsetWidth;
+    el.classList.add("score-pop");
+  });
 }
 
 let _scoreSeq = 0;
@@ -512,6 +531,7 @@ async function refreshScores() {
     const r = await resp.json();
     if (seq !== _scoreSeq) return;
     renderScores(r);
+    triggerScorePop();
     $("status").textContent =
       'Oceny przeliczone heurystycznie. „Pełna ocena (LLM)" uruchamia sędziego.';
   } catch (e) {

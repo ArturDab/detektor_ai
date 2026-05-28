@@ -1619,3 +1619,24 @@ input[type="checkbox"]:focus-visible,
   background: rgba(52, 211, 153, 0.14);
   color: #34d399;
 }
+
+/* ═══════════════════════════════════════════
+   FAZA 8.8 — MOTION + MICRO-INTERAKCJE
+   ═══════════════════════════════════════════ */
+
+/* #highlighted: fade+slide in when switching to view mode */
+@keyframes hlFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#highlighted:not(.hidden) {
+  animation: hlFadeIn var(--dur-2, 0.28s) var(--ease-decelerate, cubic-bezier(0, 0, 0, 1));
+}
+
+/* Score number pop (triggered after refreshScores) */
+@keyframes scorePop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.score-pop { animation: scorePop 280ms var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)); }
