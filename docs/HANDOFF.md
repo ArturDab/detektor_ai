@@ -1,4 +1,56 @@
-# HANDOFF — sesja: redesign v5 (compact bar) + fixy + przygotowanie do redesignu Material 3
+# HANDOFF
+
+> Stan na koniec ostatniej sesji. Najnowsze sesje na górze, historia poniżej.
+
+---
+
+## Sesja: Start Fazy 8 — rewolucja graficzna (Grammarly benchmark)
+
+**Stan na początek sesji:** `main = 39dbe00` (Faza 7 zamknięta, deploy SUCCESS na produkcji), 34/34 testów zielone, ruff czysto, dark mode działa, a11y baseline po audycie skillem.
+
+**Decyzja kierunkowa:** Po Fazie 7 user zdecydował o **pełnej rewolucji graficznej** zamiast dalszego refinementu M3. Material 3 + jasny błękit z Faz 1-7 to działający fundament, ale ograniczony charakter — apka wygląda "dashboard-like" zamiast "asystent piszący".
+
+**Benchmark:** Grammarly (1 aplikacja). User wrzucił 4 screeny: proofreader (główny widok), AI Chat, dashboard, Authorship. Opisy w `docs/DESIGN_SPEC.md` §13.
+
+**Co zostaje:** font Geist, mechanizm `[data-theme]` toggle + `localStorage` + `theme-color` meta, semantyka HTML (skip-link, `aria-live`, role), helper `_asset_version` (cache-busting), `Cache-Control: no-store` na HTML.
+
+**Co się zmienia (pełna wymiana):** paleta light + dark od zera (akcent zielony `#10894e` zamiast jasnego błękitu — open question #1 — user potwierdza lub proponuje alternatywę), skala typograficzna (10 ról), spacing 4px-base, radius (5 wartości w tym pill dla CTA), elevation (4 poziomy z border+shadow), motion (3 czasy, 3 easingi), layout (sidebar 380px sticky + editor centered max-width 820px + topbar 56px), system komponentów (15 anatomii: Button, Input/Textarea, Select styled native, Card, Popover, Badge, ScoreCard, AIIndicator, DimensionRow, FindingItem, Suggestion, Toast, Skip-link, ThemeToggle, LoadingOverlay), wizualizacja wskaźników (slop = wiodący "writing score" z dużą liczbą + progress bar; AI provenance = segmented bar 5 segmentów + label jakościowy, wyraźnie różny artefakt).
+
+**Co nie ruszamy:** backend (`src/detektor/**`, endpointy `/api/analyze|/api/rewrite|/api/humanize`, payloads, heurystyki, LLM), mechanika offsetów (`applyReplacement` + sync `<mark data-idx>` ↔ `CURRENT.findings` + `formatRichHtml` + `refreshScores`).
+
+**Plan faz** (każda = osobny PR squash do `main`, auto-merge, apka działa po każdej):
+- **8.0** (ten PR) — Research + Design Spec. Produkuje `docs/DESIGN_SPEC.md`, placeholdery screenów, update ROADMAP/HANDOFF. Zero zmian w `src/`.
+- **8.1** — Tokeny + reset CSS (nowe `:root` + `[data-theme="dark"]`, stare nazwy jako aliasy).
+- **8.2** — Layout / szkielet (grid, breakpointy, sticky, semantyka).
+- **8.3** — Komponenty bazowe + typografia (Button, Input, Select, Card, Popover skorupa, Toast, `showToast` utility).
+- **8.4** — Editor (lewa kolumna): textarea, overlay, rendered `<mark>` w nowej kolorystyce. Bez zmian logiki.
+- **8.5** — Sidebar wyników (prawa kolumna): controls → scores → findings → nav.
+- **8.6** — Wskaźniki: `ScoreCard` (slop wiodący) + `AIIndicator` (segmented bar) + `DimensionRow`.
+- **8.7** — Findings + popover + diff inline token-level. **Najbardziej delikatna faza** (sync marks↔findings).
+- **8.8** — Motion + micro-interakcje + a11y polish (focus-trap, klawiatura, `prefers-reduced-motion`).
+- **8.9** — Audyt skillem `.agents/skills/web-design-guidelines` + fix, removal aliasów starych tokenów.
+
+**Co zrobiono w tej sesji** (PR Fazy 8.0):
+1. Reset gałęzi dev na `origin/main` (`39dbe00`) — wcześniej była sprzed Fazy 2-7.
+2. `docs/DESIGN_SPEC.md` (19 sekcji, ~700 linii) — paleta, typografia, spacing/radius/elevation/motion, 15 komponentów, szkielet layoutu, matryca stanów, opisy 4 screenów Grammarly, decyzje (open questions zamknięte i otwarte).
+3. `docs/design/screenshots/README.md` — placeholdery, instrukcja dla usera.
+4. `docs/ROADMAP.md` — dopisana Faza 6 i 7 (zrealizowane) + sekcja "Faza 8 — REWOLUCJA GRAFICZNA" z linkiem do spec i planem 8.0-8.9.
+5. `docs/HANDOFF.md` — ta sekcja.
+
+**Open questions (do dopytania przed 8.1):**
+1. **Akcent zielony** `#10894e` (light) / `#34d399` (dark) — user potwierdza lub proponuje alternatywę (np. blue continuation, neutral near-black à la Vercel).
+2. **Ikon SVG dla logo** — custom (lupa? mózg? oko?) czy sam wordmark "detektor_ai"?
+3. **Severity 4 czy 3 poziomy** — scalić `info` z `low`?
+4. **Empty state** sidebara — ilustracja czy sama instrukcja tekstowa?
+
+**TODO po merge PR Fazy 8.0:**
+1. User wrzuca PNG screeny do `docs/design/screenshots/grammarly-{01..04}.png`.
+2. User odpowiada na open question #1 (akcent).
+3. Start Fazy 8.1 na nowym dev-branchu z `origin/main`.
+
+---
+
+## Sesja: redesign v5 (compact bar) + fixy + przygotowanie do redesignu Material 3
 
 Stan na koniec sesji. Fakty oparte na kodzie, git, testach i deployach Railway. Założenia oznaczone jako ZAŁOŻENIE.
 
