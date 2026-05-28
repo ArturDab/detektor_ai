@@ -10,6 +10,13 @@ const DIM_LABEL = {
   repetition: "Powtarzalność",
   unnatural_rhythm: "Nienaturalny rytm",
 };
+const DIM_HINT = {
+  generic: "Jak bardzo tekst jest ogólnikowy i mógłby pasować do dowolnego tematu.",
+  cliche: "Liczba utartych zwrotów i komunałów („w dzisiejszych czasach”, „kluczową rolę”).",
+  low_information: "Ile zdań nie wnosi konkretnej, nowej treści.",
+  repetition: "Jak często powracają te same słowa i schematy zdań.",
+  unnatural_rhythm: "Czy zdania mają mechaniczną, jednostajną długość typową dla AI.",
+};
 
 const CURRENT = { text: "", findings: [] };
 let ACTIVE_IDX = -1;
@@ -202,7 +209,8 @@ function renderDimensions(dimensions) {
     .map((k) => {
       const v = dimensions[k];
       const label = DIM_LABEL[k] || k;
-      return `<div class="dimension-row">
+      const hint = DIM_HINT[k] || "";
+      return `<div class="dimension-row"${hint ? ` title="${escapeHtml(hint)}"` : ""}>
         <span class="dim-label">${escapeHtml(label)}</span>
         <div class="dim-bar-track"><div class="dim-bar-fill" style="width:${v}%"></div></div>
         <span class="dim-value">${v}</span>
@@ -278,8 +286,38 @@ function renderLlmError(err) {
   }
 }
 
+function bucketSlop(s) {
+  if (s < 25) return "bardzo dobra";
+  if (s < 50) return "przyzwoita";
+  if (s < 75) return "przeciętna";
+  return "słaba";
+}
+function bucketAi(s) {
+  if (s < 25) return "raczej napisał ją człowiek";
+  if (s < 50) return "trudno jednoznacznie ocenić — raczej człowiek";
+  if (s < 75) return "część fragmentów wygląda na pisane przez AI";
+  return "tekst najpewniej powstał z pomocą AI";
+}
+function renderHumanSummary(r) {
+  const box = $("analysis-summary");
+  if (!box) return;
+  const slop = r.slop.score;
+  const ai = r.ai_provenance.score;
+  const quality = Math.max(0, Math.min(100, Math.round(100 - slop)));
+  const n = CURRENT.findings.length;
+  const problems =
+    n === 0
+      ? "Nie znaleźliśmy fragmentów wymagających poprawy."
+      : `Do poprawy: <strong>${n}</strong> ${n === 1 ? "fragment" : n < 5 ? "fragmenty" : "fragmentów"}.`;
+  box.innerHTML =
+    `Jakość tekstu jest <strong>${bucketSlop(slop)}</strong> (${quality}/100). ` +
+    `Jeśli chodzi o autorstwo — ${bucketAi(ai)} (${ai.toFixed(0)}/100). ${problems}`;
+  box.classList.remove("hidden");
+}
+
 function renderScores(r) {
   renderVerdict(r);
+  renderHumanSummary(r);
 
   // Compact bar: colored numbers
   const slopNum = $("bar-num-slop");
@@ -361,6 +399,7 @@ function renderReport(r) {
   $("proposals-empty").classList.add("hidden");
   $("proposals-panel").classList.remove("hidden");
   updateNav();
+  if (window.__revealAnalysisToggle) window.__revealAnalysisToggle();
 
   if (CURRENT.findings.length > 0 && !CURRENT.findings[0].proposals) {
     loadProposalsForFinding(0);
@@ -878,6 +917,50 @@ document.addEventListener("keydown", (e) => {
       if (stored !== "light" && stored !== "dark") apply(e.matches ? "dark" : "light");
     });
   } catch (e) {}
+}());
+
+// ---------- Drawer analizy (≤1199px) ----------
+(function () {
+  const toggle = $("analysis-toggle");
+  const closeBt = $("analysis-close");
+  const overlay = $("analysis-overlay");
+  function isDrawerMode() {
+    return window.matchMedia("(max-width: 1199px)").matches;
+  }
+  let lastFocus = null;
+  function openDrawer() {
+    if (!isDrawerMode()) return;
+    lastFocus = document.activeElement;
+    document.body.classList.add("analysis-open");
+    if (overlay) overlay.classList.remove("hidden");
+    if (toggle) toggle.setAttribute("aria-expanded", "true");
+    if (closeBt) closeBt.focus();
+  }
+  function closeDrawer() {
+    document.body.classList.remove("analysis-open");
+    if (overlay) overlay.classList.add("hidden");
+    if (toggle) toggle.setAttribute("aria-expanded", "false");
+    if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+  }
+  function toggleDrawer() {
+    document.body.classList.contains("analysis-open") ? closeDrawer() : openDrawer();
+  }
+  if (toggle) toggle.addEventListener("click", toggleDrawer);
+  if (closeBt) closeBt.addEventListener("click", closeDrawer);
+  if (overlay) overlay.addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("analysis-open")) {
+      e.preventDefault();
+      closeDrawer();
+    }
+  });
+  window.addEventListener("resize", () => {
+    if (!isDrawerMode() && document.body.classList.contains("analysis-open")) closeDrawer();
+  });
+  // Pokaż przycisk „Analiza" dopiero po pierwszej analizie (CSS i tak chowa go ≥1200px).
+  window.__revealAnalysisToggle = function () {
+    if (toggle) toggle.classList.remove("hidden");
+  };
 }());
 
 loadModels();
