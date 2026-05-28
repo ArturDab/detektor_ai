@@ -2363,3 +2363,111 @@ body { background: var(--page-bg); }
   .toast { animation: none !important; }
   .toast.toast-exit { animation: none !important; opacity: 0; }
 }
+
+/* ════════════════════════════════════════════════════════════
+   FAZA 11 — UKŁAD 3-KOLUMNOWY (tekst | propozycje | analiza)
+   + drawer analizy na węższych ekranach + podsumowanie pod laika
+   ════════════════════════════════════════════════════════════ */
+
+/* ≥1200px: trzy kolumny */
+.three-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px 330px;
+  gap: var(--space-6, 20px);
+  align-items: start;
+}
+.col-doc { min-width: 0; }
+
+/* KOL.2 — propozycje (= .col-right): szerokość steruje grid, nie inline width */
+.three-col .col-right { width: auto; flex-shrink: 1; }
+
+/* KOL.3 — analiza: transparentny rail z pływającymi kartami (jak col-right) */
+.col-analysis {
+  min-width: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: calc(var(--topbar-h) + 12px);
+  align-self: start;
+  max-height: calc(100vh - var(--topbar-h) - 20px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.col-analysis-head { display: none; align-items: center; justify-content: space-between; }
+.col-analysis-title { margin: 0; font-size: var(--font-h3, 1.125rem); font-weight: 700; color: var(--text); }
+.analysis-close {
+  background: none; border: none; box-shadow: none;
+  font-size: 26px; line-height: 1; color: var(--muted);
+  cursor: pointer; padding: 0 6px; border-radius: var(--radius-sm);
+}
+.analysis-close:hover { background: var(--surface-2); color: var(--text); }
+
+/* Ludzkie podsumowanie (prostym językiem) */
+.analysis-summary {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-body);
+  padding: 14px 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+}
+.analysis-summary strong { color: var(--text); font-weight: 700; }
+
+/* Krótkie wyjaśnienia wskaźników */
+.metric-hint {
+  margin: 2px 0 8px;
+  font-size: var(--font-caption, 0.8125rem);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Przycisk „Analiza" — domyślnie ukryty (na desktopie KOL.3 jest zawsze widoczna) */
+.analysis-toggle { display: none; }
+
+/* ── 960–1199px: 2 kolumny, analiza jako wysuwany panel ── */
+@media (max-width: 1199px) {
+  .three-col { grid-template-columns: minmax(0, 1fr) 360px; }
+
+  .col-analysis {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: min(440px, 94vw);
+    max-height: 100vh;
+    border-radius: 0;
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    background: var(--page-bg);
+    padding: var(--space-5, 18px);
+    transform: translateX(100%);
+    transition: transform var(--dur-slow) var(--ease-out);
+    z-index: 1001;
+  }
+  body.analysis-open .col-analysis { transform: translateX(0); }
+  .col-analysis-head { display: flex; }
+
+  .analysis-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0; pointer-events: none;
+    transition: opacity var(--dur-base) var(--ease-in-out);
+    z-index: 1000;
+  }
+  body.analysis-open .analysis-overlay { opacity: 1; pointer-events: auto; }
+
+  .analysis-toggle:not(.hidden) { display: inline-flex; }
+}
+
+/* ── <960px: pojedyncza kolumna (dokument → propozycje), analiza w drawerze ── */
+@media (max-width: 959px) {
+  .three-col { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .col-analysis { transition: none; }
+  .analysis-overlay { transition: none; }
+}

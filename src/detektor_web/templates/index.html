@@ -44,10 +44,10 @@
   </header>
 
   <main id="main" class="layout">
-    <div class="two-col">
+    <div class="three-col">
 
-      <!-- ══ LEFT: editor ══ -->
-      <div class="col-left">
+      <!-- ══ KOL.1: DOKUMENT ══ -->
+      <div class="col-doc">
         <div class="panel card text-pane">
           <div class="text-pane-head">
             <h3>Tekst</h3>
@@ -75,7 +75,7 @@
         </div>
       </div>
 
-      <!-- ══ RIGHT: sidebar ══ -->
+      <!-- ══ KOL.2: PROPOZYCJE (= .col-right, kontener scrolla findings) ══ -->
       <div class="col-right">
 
         <!-- ControlsCard — zawsze widoczny -->
@@ -85,85 +85,11 @@
             <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
               <input type="checkbox" id="with-humanize" /> Z propozycjami
             </label>
+            <button id="analysis-toggle" class="btn-mini analysis-toggle hidden" type="button"
+                    aria-expanded="false" aria-controls="col-analysis"
+                    title="Pokaż panel analizy">Analiza ▸</button>
           </div>
           <span id="status" class="status" aria-live="polite"></span>
-        </div>
-
-        <!-- Wyniki analizy — pokazywane po analizie -->
-        <div id="abar-results" class="rail-card score-hero hidden">
-          <div class="gauge" data-level="ok" role="img" aria-label="Ocena jakości pisania">
-            <div class="gauge-inner">
-              <span id="gauge-num" class="gauge-num">—</span>
-              <span class="gauge-cap">jakość · /100</span>
-            </div>
-          </div>
-          <div class="hero-stats">
-            <div class="hero-stat">
-              <span id="bar-num-slop" class="bar-score-num">—</span>
-              <span class="bar-score-lbl">Slop</span>
-            </div>
-            <div class="hero-stat">
-              <span id="bar-num-ai" class="bar-score-num">—</span>
-              <span class="bar-score-lbl">Sygnał AI</span>
-            </div>
-          </div>
-          <div id="abar-verdict" class="abar-verdict">
-            <div id="verdict-headline" class="verdict-headline"></div>
-          </div>
-          <div class="abar-actions">
-            <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
-            <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
-            <span id="humanize-status" class="status" aria-live="polite"></span>
-            <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Szczegóły ▾</button>
-          </div>
-        </div>
-
-        <!-- Rozwijane szczegóły: pełne gauge, sub-werdykt, LLM, wymiary -->
-        <div id="analysis-expand" class="rail-card analysis-expand hidden">
-          <div class="expand-inner">
-            <div id="llm-error" class="alert alert-error hidden"></div>
-            <div id="notes" class="notes"></div>
-            <div id="verdict-sub" class="verdict-sub expand-verdict-sub hidden"></div>
-            <div class="scores">
-              <!-- ScoreCard v2 — Jakość tekstu -->
-              <div class="score-card-v2">
-                <span class="sc-label">Jakość tekstu</span>
-                <div class="sc-number-row">
-                  <span id="sc-num-slop" class="sc-number">—</span>
-                  <span class="sc-denom">/100</span>
-                </div>
-                <div class="sc-bar-track">
-                  <div id="sc-bar-slop" class="sc-bar-fill" data-level="ok" style="width:0%"></div>
-                </div>
-                <span id="band-slop" class="band"></span>
-                <details class="details">
-                  <summary>Szczegóły oceny</summary>
-                  <div id="conf-slop" class="conf"></div>
-                  <div id="break-slop" class="breakdown"></div>
-                </details>
-              </div>
-              <!-- AIIndicator — segmented bar -->
-              <div class="ai-indicator">
-                <span class="ai-label">Sygnał autorstwa AI</span>
-                <div class="ai-bar-row">
-                  <div id="ai-segments" class="ai-segments"></div>
-                  <span id="ai-value" class="ai-value">—</span>
-                </div>
-                <span id="band-ai" class="ai-qual band"></span>
-                <details class="details">
-                  <summary>Szczegóły oceny</summary>
-                  <div id="conf-ai" class="conf"></div>
-                  <div id="break-ai" class="breakdown"></div>
-                  <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
-                </details>
-              </div>
-            </div>
-            <div id="llm-explanation" class="llm-box hidden"></div>
-            <div class="exp-panel">
-              <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
-              <div id="dimensions" class="dimension-list">Brak danych z LLM (tryb heurystyczny).</div>
-            </div>
-          </div>
         </div>
 
         <!-- Nawigacja po fragmentach -->
@@ -197,8 +123,102 @@
           <ul id="findings" class="findings"></ul>
         </div>
 
-      </div><!-- /col-right -->
-    </div><!-- /two-col -->
+      </div><!-- /col-right (KOL.2) -->
+
+      <!-- ══ KOL.3: ANALIZA (≤1199px = wysuwany panel) ══ -->
+      <aside id="col-analysis" class="col-analysis" aria-label="Analiza tekstu">
+        <div class="col-analysis-head">
+          <h2 class="col-analysis-title">Analiza</h2>
+          <button id="analysis-close" class="analysis-close" type="button" aria-label="Zamknij panel analizy" title="Zamknij">&times;</button>
+        </div>
+
+        <!-- Ludzkie podsumowanie (prostym językiem) -->
+        <div id="analysis-summary" class="rail-card analysis-summary hidden"></div>
+
+        <!-- Wyniki analizy — pokazywane po analizie -->
+        <div id="abar-results" class="rail-card score-hero hidden">
+          <div class="gauge" data-level="ok" role="img" aria-label="Ocena jakości pisania">
+            <div class="gauge-inner">
+              <span id="gauge-num" class="gauge-num">—</span>
+              <span class="gauge-cap">jakość · /100</span>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <span id="bar-num-slop" class="bar-score-num">—</span>
+              <span class="bar-score-lbl">Slop</span>
+            </div>
+            <div class="hero-stat">
+              <span id="bar-num-ai" class="bar-score-num">—</span>
+              <span class="bar-score-lbl">Sygnał AI</span>
+            </div>
+          </div>
+          <div id="abar-verdict" class="abar-verdict">
+            <div id="verdict-headline" class="verdict-headline"></div>
+          </div>
+          <div class="abar-actions">
+            <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
+            <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
+            <span id="humanize-status" class="status" aria-live="polite"></span>
+            <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Szczegóły ▾</button>
+          </div>
+        </div>
+
+        <!-- Rozwijane szczegóły: ScoreCard, AIIndicator, LLM, wymiary -->
+        <div id="analysis-expand" class="rail-card analysis-expand hidden">
+          <div class="expand-inner">
+            <div id="llm-error" class="alert alert-error hidden"></div>
+            <div id="notes" class="notes"></div>
+            <div id="verdict-sub" class="verdict-sub expand-verdict-sub hidden"></div>
+            <div class="scores">
+              <!-- ScoreCard v2 — Jakość tekstu -->
+              <div class="score-card-v2">
+                <span class="sc-label">Jakość tekstu</span>
+                <p class="metric-hint">Ile w tekście „lania wody", frazesów i ogólników. Im wyżej, tym konkretniej i naturalniej.</p>
+                <div class="sc-number-row">
+                  <span id="sc-num-slop" class="sc-number">—</span>
+                  <span class="sc-denom">/100</span>
+                </div>
+                <div class="sc-bar-track">
+                  <div id="sc-bar-slop" class="sc-bar-fill" data-level="ok" style="width:0%"></div>
+                </div>
+                <span id="band-slop" class="band"></span>
+                <details class="details">
+                  <summary>Szczegóły dla zaawansowanych</summary>
+                  <div id="conf-slop" class="conf"></div>
+                  <div id="break-slop" class="breakdown"></div>
+                </details>
+              </div>
+              <!-- AIIndicator — segmented bar -->
+              <div class="ai-indicator">
+                <span class="ai-label">Sygnał autorstwa AI</span>
+                <p class="metric-hint">Na ile tekst przypomina styl generowany przez AI. To oszacowanie, nie dowód.</p>
+                <div class="ai-bar-row">
+                  <div id="ai-segments" class="ai-segments"></div>
+                  <span id="ai-value" class="ai-value">—</span>
+                </div>
+                <span id="band-ai" class="ai-qual band"></span>
+                <details class="details">
+                  <summary>Szczegóły dla zaawansowanych</summary>
+                  <div id="conf-ai" class="conf"></div>
+                  <div id="break-ai" class="breakdown"></div>
+                  <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
+                </details>
+              </div>
+            </div>
+            <div id="llm-explanation" class="llm-box hidden"></div>
+            <div class="exp-panel">
+              <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
+              <div id="dimensions" class="dimension-list">Brak danych z LLM (tryb heurystyczny).</div>
+            </div>
+          </div>
+        </div>
+      </aside><!-- /col-analysis (KOL.3) -->
+
+      <!-- Overlay drawera (klik = zamknij) -->
+      <div id="analysis-overlay" class="analysis-overlay hidden" tabindex="-1"></div>
+
+    </div><!-- /three-col -->
   </main>
 
   <script src="/static/app.js?v={{ assets['app.js'] }}"></script>
