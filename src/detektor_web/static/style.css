@@ -972,6 +972,16 @@ mark.mark-active {
 }
 .finding .load-props:hover { background: var(--accent); color: var(--accent-contrast); }
 .props-loading { margin-top: 8px; color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 7px; }
+.props-error {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-sev-high-fg);
+  background: var(--color-sev-high-bg);
+  border: 1px solid var(--color-sev-high-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+}
 
 /* ═══════════════════════════════════════════
    SUGGESTION PROPS

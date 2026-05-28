@@ -108,23 +108,37 @@ function breakdownHtml(items) {
     .join(" &nbsp;|&nbsp; ");
 }
 
-// Builds highlighted HTML: inserts <mark> tags then formats into rich blocks.
-function renderHighlighted(text, findings) {
+// Removes overlapping findings, keeping one <mark>-able finding per text span.
+// Used as the single source of truth so the proposals panel and the text
+// highlights stay 1:1 (each highlighted fragment ↔ exactly one finding card).
+function dedupeFindings(findings) {
   const indexed = findings
-    .map((f, i) => ({ f, i }))
-    .filter((x) => x.f.end > x.f.start)
-    .sort((a, b) => a.f.start - b.f.start || b.f.end - a.f.end);
+    .map((f) => f)
+    .filter((f) => f.end > f.start)
+    .sort((a, b) => a.start - b.start || b.end - a.end);
   const chosen = [];
   let lastEnd = -1;
-  for (const x of indexed) {
-    if (x.f.start >= lastEnd) {
-      chosen.push(x);
-      lastEnd = x.f.end;
+  for (const f of indexed) {
+    if (f.start >= lastEnd) {
+      chosen.push(f);
+      lastEnd = f.end;
     }
   }
+  return chosen;
+}
+
+// Builds highlighted HTML: inserts <mark> tags then formats into rich blocks.
+// Expects `findings` already deduped (see dedupeFindings); index i matches the
+// proposals panel order, so mark[data-idx] ↔ finding card stay in sync.
+function renderHighlighted(text, findings) {
+  const ordered = findings
+    .map((f, i) => ({ f, i }))
+    .filter((x) => x.f.end > x.f.start)
+    .sort((a, b) => a.f.start - b.f.start);
   let flat = "";
   let cur = 0;
-  for (const { f, i } of chosen) {
+  for (const { f, i } of ordered) {
+    if (f.start < cur) continue; // safety: skip any residual overlap
     flat += escapeHtml(text.slice(cur, f.start));
     const seg = escapeHtml(text.slice(f.start, f.end));
     const tip = escapeHtml(f.message + (f.suggestion ? "  →  " + f.suggestion : ""));
@@ -246,7 +260,13 @@ function renderFindings(findings) {
       } else if (f._loading) {
         action = `<div class="props-loading"><span class="spinner-sm"></span> Generuję propozycje…</div>`;
       } else {
-        action = `<button class="load-props" data-idx="${i}">Załaduj propozycje</button>`;
+        const err = f._error ? `<div class="props-error">${escapeHtml(f._error)}</div>` : "";
+        action = `${err}
+          <button class="load-props" data-idx="${i}">${f._error ? "Spróbuj ponownie" : "Załaduj propozycje"}</button>
+          <div class="prop-custom-inline">
+            <input type="text" data-idx="${i}" placeholder="Wpisz własną wersję..." />
+            <button class="prop-custom-apply" data-idx="${i}">Zastosuj</button>
+          </div>`;
       }
       return `<li class="finding sev-${f.severity}" data-idx="${i}">
         <div class="finding-head">
@@ -370,7 +390,10 @@ function renderScores(r) {
 
 function renderReport(r) {
   CURRENT.text = r.text;
-  CURRENT.findings = (r.findings || []).map((f) => ({ ...f }));
+  // Dedupe overlapping findings so the proposals panel matches the highlights
+  // 1:1 — multiple analyzers often flag the same span (np. „W dzisiejszych
+  // czasach"), które wcześniej dawały karty propozycji bez podświetlenia.
+  CURRENT.findings = dedupeFindings((r.findings || []).map((f) => ({ ...f })));
   ACTIVE_IDX = CURRENT.findings.length > 0 ? 0 : -1;
   DONE_COUNT = 0;
 
@@ -482,12 +505,14 @@ async function loadProposalsForFinding(idx) {
   const f = CURRENT.findings[idx];
   if (!f || f._loading || (f.proposals && f.proposals.length)) return;
   f._loading = true;
+  f._error = null;
   renderFindings(CURRENT.findings);
   updateNav();
   try {
     const data = await fetchProposals(f);
     if (CURRENT.findings[idx] !== f) return;
     f.proposals = data.proposals || [];
+    f._error = f.proposals.length ? null : data.error || "Nie udało się wygenerować propozycji — wpisz własną wersję.";
     f._loading = false;
     renderFindings(CURRENT.findings);
     updateNav();
@@ -499,6 +524,7 @@ async function loadProposalsForFinding(idx) {
   } catch (e) {
     if (CURRENT.findings[idx] === f) {
       f._loading = false;
+      f._error = "Błąd połączenia — spróbuj ponownie lub wpisz własną wersję.";
       renderFindings(CURRENT.findings);
       const btn = $("load-all-props");
       if (btn && btn.disabled && !CURRENT.findings.some((g) => g._loading)) {
@@ -604,6 +630,7 @@ async function regenerateProposals(idx, btn) {
     const props = data.proposals || [];
     if (props.length) {
       f.proposals = props;
+      f._error = null;
       renderFindings(CURRENT.findings);
       updateNav();
     } else {
