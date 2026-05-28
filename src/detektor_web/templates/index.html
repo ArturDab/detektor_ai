@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eaf1fd" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e131b" />
   <script>
     (function () {
       try {
@@ -24,6 +26,7 @@
   <link rel="stylesheet" href="/static/style.css?v={{ assets['style.css'] }}" />
 </head>
 <body>
+  <a class="skip-link" href="#main">Przejdź do treści</a>
   <header class="topbar">
     <div class="topbar-inner">
       <h1>Detektor AI slop <span class="pl">PL</span></h1>
@@ -49,11 +52,11 @@
       <!-- Row 1: controls — always visible -->
       <div class="abar-controls">
         <button id="analyze">Analizuj</button>
-        <select id="model-select" class="model-select" title="Model LLM"></select>
+        <select id="model-select" class="model-select" aria-label="Model LLM" title="Model LLM"></select>
         <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
           <input type="checkbox" id="with-humanize" /> Z propozycjami
         </label>
-        <span id="status" class="status"></span>
+        <span id="status" class="status" aria-live="polite"></span>
       </div>
 
       <!-- Row 2: results — shown after analysis -->
@@ -75,7 +78,7 @@
         <div class="abar-actions">
           <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
           <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
-          <span id="humanize-status" class="status"></span>
+          <span id="humanize-status" class="status" aria-live="polite"></span>
           <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Szczegóły ▾</button>
         </div>
       </div>
@@ -125,7 +128,7 @@
     </div>
   </div>
 
-  <main class="layout">
+  <main id="main" class="layout">
     <div class="two-col">
       <div class="col-left">
         <div class="panel card text-pane">
@@ -142,7 +145,7 @@
             </div>
           </div>
           <div class="text-box">
-            <textarea id="text" placeholder="Wklej tutaj tekst artykułu po polsku..."></textarea>
+            <textarea id="text" aria-label="Tekst do analizy" placeholder="Wklej tutaj tekst artykułu po polsku…"></textarea>
             <div id="highlighted" class="highlighted hidden"></div>
             <div id="text-loader" class="text-loader hidden">
               <span class="spinner-lg"></span>
@@ -158,17 +161,17 @@
       <div class="col-right">
         <!-- Navigation bar (visible when findings exist) -->
         <div id="finding-nav" class="finding-nav" style="display:none">
-          <button id="nav-prev" class="nav-btn" title="Poprzedni fragment (←)">&#8592;</button>
+          <button id="nav-prev" class="nav-btn" aria-label="Poprzedni fragment" title="Poprzedni fragment (←)"><span aria-hidden="true">&#8592;</span></button>
           <span id="nav-pos" class="nav-pos">0 / 0</span>
-          <button id="nav-next" class="nav-btn" title="Następny fragment (→)">&#8594;</button>
+          <button id="nav-next" class="nav-btn" aria-label="Następny fragment" title="Następny fragment (→)"><span aria-hidden="true">&#8594;</span></button>
           <button id="nav-apply" class="nav-apply" title="Zastosuj pierwszą propozycję i przejdź dalej">✓ Zastosuj</button>
-          <span id="nav-done" class="nav-done"></span>
+          <span id="nav-done" class="nav-done" aria-live="polite"></span>
           <button id="load-all-props" class="btn-load-all hidden" title="Załaduj propozycje dla wszystkich fragmentów">Załaduj wszystkie</button>
         </div>
 
         <!-- Empty state (before analysis) -->
         <div id="proposals-empty" class="proposals-empty">
-          <div class="empty-icon">✦</div>
+          <div class="empty-icon" aria-hidden="true">✦</div>
           <p class="empty-title">Gotowy do analizy</p>
           <p class="empty-body">Wklej tekst w lewym oknie i kliknij <strong>Analizuj</strong>, aby zobaczyć propozycje zmian.</p>
           <ul class="empty-list">
