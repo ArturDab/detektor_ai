@@ -160,3 +160,56 @@ Zachowujemy szkielet v5; redesign jest tokenowy/komponentowy (neutral M3):
 **Przepływ bez zmian:** `setLeftMode(edit→loading→view)`, sync `mark↔finding`
 (`navigateTo`), live `refreshScores(judge:false)`, klawiatura ←/→/Enter,
 `loadAllProposals`. Zmiana M3 = wizualna (kolory/elevation/kształt/stany).
+
+### Faza 6 — Drobne UX (ZREALIZOWANA, #41)
+- [x] **Przykładowy tekst**: przycisk „Wklej przykład" (`#load-example`) w nagłówku
+      panelu tekstu wypełnia textarea polskim tekstem „slop" do demo
+      (`EXAMPLE_TEXT` w `app.js`).
+- [x] **Wyczyść** (`#clear-text`): pojawia się gdy textarea ma treść (w trybie
+      edycji); `updateInputButtons()` synchronizuje stan z `setLeftMode` i
+      licznikiem słów.
+- [x] **Feedback kopiowania**: `copyAll` po sukcesie pokazuje na przycisku
+      „Skopiowano ✓" (revert do oryginalnej etykiety po 1.8 s).
+- [x] Zapamiętywanie wyboru modelu działa od wcześniej (`loadModels` +
+      `localStorage`).
+
+### Faza 7 — Audyt web-design-guidelines (Vercel) + fixy (ZREALIZOWANA, #42)
+- [x] **Skill** `.agents/skills/web-design-guidelines` uruchomiony — pobiera
+      świeże guidelines z `vercel-labs/web-interface-guidelines`.
+- [x] **A11y**: `aria-label` na przyciskach ikonowych (`#nav-prev`/`#nav-next` —
+      glify w `<span aria-hidden="true">`), na `<textarea>`/`<select>`;
+      `aria-live="polite"` na `#status`/`#humanize-status`/`#nav-done`;
+      `aria-hidden` na dekoracyjnej `.empty-icon`; **skip-link** „Przejdź do
+      treści" → `#main` (off-screen, widoczny przy focusie); `<meta name="theme-color">`
+      light/dark.
+- [x] **Typografia**: `…` zamiast `...` (placeholder, „Analizuję…");
+      `font-variant-numeric: tabular-nums` na `.word-count`/`.bar-score-num`/`.g-num`.
+- [x] **Touch**: `touch-action: manipulation` w base `button` — eliminacja 300 ms
+      tap-delay iOS.
+- [~] Świadomie pominięte: wirtualizacja findings (zwykle <50; premature), marki
+      jako `<button>` (większy refaktor offsetów; klawiatura już działa przez
+      ←/→/Enter), `confirm()` na „Wyczyść" (może irytować).
+
+### Faza 8 — Nowa szata graficzna (W PRZYGOTOWANIU; planowanie w kolejnej sesji)
+Użytkownik zapowiedział (prompt kończący sesję): „W kolejnym kroku opracujemy
+zupełnie nową szatę graficzną dla aplikacji. Z mądrzejszym układem, bardziej
+intuicyjnym rozkładem elementów, ciekawszą szatą wizualną, lepszym UI/UX, nową
+belką górną, upiększonym formatowaniem tekstów, ramek, bardziej intuicyjnymi
+reakcjami na działania użytkownika." Praca zaczyna się w **osobnej konwersacji**
+od analizy/rekomendacji/planu — NIE od kodu.
+
+**Etapy planowania (do wykonania w kolejnej sesji):**
+- [ ] **Analiza obecnego UI**: mocne strony (2 kolumny, sticky belka, sync
+      mark↔finding, dark mode M3, a11y baseline) vs słabe (do potwierdzenia z
+      użytkownikiem — gęstość belki, hierarchia wizualna, formatowanie ramek,
+      prezentacja wskaźników).
+- [ ] **Rekomendacje** (do dyskusji): szkielet (2 kolumny vs centered editor +
+      side panels), paleta (jasny błękit M3 vs nowa), font (Geist vs alternatywa),
+      system komponentów (kontynuacja M3 vs własny), motion (M3 vs bogatsze).
+- [ ] **Szczegółowy plan implementacji** w fazach — każda faza = osobny PR do
+      `main`, weryfikacja na produkcji.
+- [ ] Plan zapisać w tym dokumencie jako Faza 8+ (tokeny, komponenty, kroki).
+
+**Fundamenty do zachowania** (jak w Fazie 0): backend bez zmian logiki, dwie
+kolumny tekst↔propozycje, sticky belka analizy, sync `<mark>` ↔ propozycja,
+`setLeftMode`, live `judge:false`, graceful degradation bez `GEMINI_API_KEY`.
