@@ -150,8 +150,20 @@
 
         <div id="analysis-body" class="analysis-body">
 
+          <!-- Placeholder do czasu pierwszej analizy -->
+          <div id="analysis-empty" class="rail-card analysis-empty">
+            <div class="gauge gauge-ghost" data-level="ok" style="--pct:0" aria-hidden="true">
+              <div class="gauge-inner">
+                <span class="gauge-num">—</span>
+                <span class="gauge-cap">ludzki · /100</span>
+              </div>
+            </div>
+            <p class="empty-title">Tu pojawi się ocena</p>
+            <p class="empty-body">Po analizie pokażemy, jak bardzo tekst jest ludzki, oraz szczegółowy raport: AI slop, warstwę językową i statystyki.</p>
+          </div>
+
           <!-- Gauge: jak bardzo tekst jest ludzki -->
-          <div id="abar-results" class="rail-card score-hero">
+          <div id="abar-results" class="rail-card score-hero hidden">
             <div class="gauge" data-level="ok" role="img" aria-label="Jak bardzo tekst jest ludzki">
               <div class="gauge-inner">
                 <span id="gauge-num" class="gauge-num">—</span>
@@ -167,8 +179,8 @@
             <span id="humanize-status" class="status" aria-live="polite"></span>
           </div>
 
-          <!-- Raport szczegółowy (zawsze widoczny) -->
-          <div id="analysis-report" class="rail-card analysis-report">
+          <!-- Raport szczegółowy (po analizie) -->
+          <div id="analysis-report" class="rail-card analysis-report hidden">
             <div id="llm-error" class="alert alert-error hidden"></div>
             <div id="notes" class="notes"></div>
 

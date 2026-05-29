@@ -417,7 +417,7 @@ function renderScores(r) {
   // Gauge: jak bardzo tekst jest ludzki (wysoko = zielono)
   const gNum = $("gauge-num");
   if (gNum) gNum.textContent = String(human);
-  const gauge = document.querySelector(".gauge");
+  const gauge = document.querySelector("#abar-results .gauge");
   if (gauge) {
     gauge.style.setProperty("--pct", String(human));
     gauge.style.setProperty("--gauge-color", colorForGood(human).trim());
@@ -471,8 +471,11 @@ function renderReport(r) {
     console.error("renderReport render error:", e);
   }
 
-  // Reveal analysis column (grid switches 2→3 kolumny) + show proposals
+  // Swap placeholders → realne wyniki (kolumna analizy + propozycje)
   document.body.classList.add("analyzed");
+  $("analysis-empty").classList.add("hidden");
+  $("abar-results").classList.remove("hidden");
+  $("analysis-report").classList.remove("hidden");
   $("proposals-empty").classList.add("hidden");
   $("proposals-panel").classList.remove("hidden");
   updateNav();
