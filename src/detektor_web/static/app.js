@@ -18,7 +18,7 @@ const DIM_HINT = {
   unnatural_rhythm: "Czy zdania mają mechaniczną, jednostajną długość typową dla AI.",
 };
 
-const CURRENT = { text: "", findings: [] };
+const CURRENT = { text: "", findings: [], humanize: false };
 let ACTIVE_IDX = -1;
 let DONE_COUNT = 0;
 
@@ -81,25 +81,50 @@ function bandAi(score) {
   return "Prawdopodobnie AI";
 }
 
-function renderVerdict(r) {
-  const slop = r.slop.score;
-  const ai = r.ai_provenance.score;
-  const slopHigh = slop >= 50;
-  const aiHigh = ai >= 50;
-  let headline;
-  if (!slopHigh && !aiHigh) headline = "Dobra jakość, prawdopodobnie napisane przez człowieka.";
-  else if (!slopHigh && aiHigh) headline = "Dobra jakość, ale są sygnały autorstwa AI.";
-  else if (slopHigh && !aiHigh) headline = "Generyczny tekst — ale raczej ludzki.";
-  else headline = "Generyczny tekst z wyraźnymi sygnałami AI.";
+function bandHuman(h) {
+  if (h >= 75) return "Najpewniej napisane przez człowieka";
+  if (h >= 50) return "Raczej człowiek, ale są sygnały AI";
+  if (h >= 25) return "Sporo sygnałów AI";
+  return "Najpewniej napisane przez AI";
+}
 
-  $("verdict-headline").textContent = headline;
-  const sub = $("verdict-sub");
-  sub.innerHTML =
-    `Jakość/slop: <strong>${slop.toFixed(0)}/100</strong> ` +
-    `(${bandSlop(slop)}) &nbsp;·&nbsp; ` +
-    `Sygnał AI: <strong>${ai.toFixed(0)}/100</strong> (${bandAi(ai)})`;
-  sub.classList.remove("hidden");
-  $("abar-verdict").dataset.tone = slopHigh || aiHigh ? "warn" : "ok";
+// Kolor dla ocen „im więcej, tym lepiej" (np. ludzki): wysoko = zielono.
+function colorForGood(good) {
+  return colorFor(100 - good);
+}
+
+// Przyjazne etykiety dla analizatorów warstwy językowej (wyższy wynik = gorzej).
+const LANG_LABEL = {
+  slop_phrases: "Frazesy i klisze",
+  structural: "Szablonowość struktury",
+  lexical_diversity: "Powtarzalność słownictwa",
+  rhythm: "Rytm i długość zdań",
+  punctuation_calque: "Kalki interpunkcyjne",
+  low_information: "Niska informatywność",
+  information: "Niska informatywność",
+};
+
+// Werdykt ekspercki: komentarz LLM, a w trybie heurystycznym zdanie z danych.
+function renderExpertVerdict(r) {
+  const el = $("verdict-text");
+  if (!el) return;
+  if (r.llm_explanation) {
+    el.textContent = r.llm_explanation;
+    return;
+  }
+  const human = Math.round(100 - r.ai_provenance.score);
+  const slop = r.slop.score;
+  const auth =
+    human >= 50
+      ? "Tekst wygląda na pisany przez człowieka"
+      : "Tekst nosi wyraźne znamiona generowania przez AI";
+  const lang =
+    slop < 33
+      ? "język jest konkretny i naturalny"
+      : slop < 66
+      ? "język bywa sztampowy, sporo ogólników"
+      : "dużo „lania wody”, frazesów i szablonowych zwrotów";
+  el.textContent = `${auth}; ${lang}.`;
 }
 
 function breakdownHtml(items) {
@@ -335,57 +360,89 @@ function renderHumanSummary(r) {
   box.classList.remove("hidden");
 }
 
+function renderLanguageLayer(scores) {
+  const box = $("lang-layer");
+  if (!box) return;
+  const entries = Object.entries(scores || {});
+  if (!entries.length) {
+    box.innerHTML = '<div class="muted">Brak danych.</div>';
+    return;
+  }
+  box.innerHTML = entries
+    .map(([k, v]) => {
+      const val = Math.max(0, Math.min(100, Math.round(v)));
+      const label = LANG_LABEL[k] || k;
+      const level = val < 33 ? "ok" : val < 66 ? "warn" : "bad";
+      return `<div class="metric-row metric-row-lang">
+        <span class="metric-lbl">${escapeHtml(label)}</span>
+        <div class="metric-bar-track"><div class="metric-bar-fill" data-level="${level}" style="width:${val}%"></div></div>
+        <span class="metric-num-sm">${val}</span>
+      </div>`;
+    })
+    .join("");
+}
+
+function renderStats(r) {
+  const grid = $("stats-grid");
+  if (!grid) return;
+  const text = r.text || "";
+  const words = r.word_count || (text.trim() ? text.trim().split(/\s+/).length : 0);
+  const sentences = (text.match(/[.!?…]+(?=\s|$)/g) || []).length || (text.trim() ? 1 : 0);
+  const avg = sentences ? Math.round(words / sentences) : 0;
+  const problems = CURRENT.findings.length;
+  const conf = Math.round(((r.slop.confidence + r.ai_provenance.confidence) / 2) * 100);
+  const tiles = [
+    ["Słowa", words],
+    ["Zdania", sentences],
+    ["Śr. długość zdania", `${avg} sł.`],
+    ["Wykryte problemy", problems],
+    ["Pewność oceny", `${conf}%`],
+  ];
+  grid.innerHTML = tiles
+    .map(
+      ([l, v]) =>
+        `<div class="stat-tile"><span class="stat-val">${escapeHtml(String(v))}</span><span class="stat-lbl">${escapeHtml(l)}</span></div>`
+    )
+    .join("");
+}
+
 function renderScores(r) {
-  renderVerdict(r);
+  renderExpertVerdict(r);
   renderHumanSummary(r);
 
-  // Compact bar: colored numbers
-  const slopNum = $("bar-num-slop");
-  slopNum.textContent = r.slop.score.toFixed(0);
-  slopNum.style.color = colorFor(r.slop.score).trim();
+  const ai = r.ai_provenance.score;
+  const slop = r.slop.score;
+  const human = Math.max(0, Math.min(100, Math.round(100 - ai)));
 
-  const aiNum = $("bar-num-ai");
-  aiNum.textContent = r.ai_provenance.score.toFixed(0);
-  aiNum.style.color = colorFor(r.ai_provenance.score).trim();
-
-  // Gauge jakości (Grammarly-like): jakość = 100 − slop. Wysoka = zielona.
-  const quality = Math.max(0, Math.min(100, Math.round(100 - r.slop.score)));
+  // Gauge: jak bardzo tekst jest ludzki (wysoko = zielono)
   const gNum = $("gauge-num");
-  if (gNum) gNum.textContent = String(quality);
+  if (gNum) gNum.textContent = String(human);
   const gauge = document.querySelector(".gauge");
   if (gauge) {
-    gauge.style.setProperty("--pct", String(quality));
-    gauge.style.setProperty("--gauge-color", colorFor(r.slop.score).trim());
-    gauge.dataset.level = r.slop.score < 33 ? "ok" : r.slop.score < 66 ? "warn" : "bad";
+    gauge.style.setProperty("--pct", String(human));
+    gauge.style.setProperty("--gauge-color", colorForGood(human).trim());
+    gauge.dataset.level = human >= 66 ? "ok" : human >= 33 ? "warn" : "bad";
   }
+  const hb = $("human-band");
+  if (hb) hb.textContent = bandHuman(human);
 
-  // ScoreCard v2 — slop
-  const scNum = $("sc-num-slop");
-  if (scNum) {
-    scNum.textContent = r.slop.score.toFixed(0);
-    scNum.style.color = colorFor(r.slop.score).trim();
-    const fill = $("sc-bar-slop");
-    fill.style.width = `${r.slop.score}%`;
-    fill.dataset.level = r.slop.score < 33 ? "ok" : r.slop.score < 66 ? "warn" : "bad";
+  // AI slop — liczba + pasek
+  const slopNum = $("slop-num");
+  if (slopNum) {
+    slopNum.textContent = slop.toFixed(0);
+    slopNum.style.color = colorFor(slop).trim();
   }
-  $("band-slop").textContent = bandSlop(r.slop.score);
-  $("conf-slop").textContent = `pewność: ${(r.slop.confidence * 100).toFixed(0)}%`;
-  $("break-slop").innerHTML = breakdownHtml(r.slop.breakdown);
+  const slopBar = $("slop-bar");
+  if (slopBar) {
+    slopBar.style.width = `${slop}%`;
+    slopBar.dataset.level = slop < 33 ? "ok" : slop < 66 ? "warn" : "bad";
+  }
+  const sb = $("slop-band");
+  if (sb) sb.textContent = bandSlop(slop);
 
-  // AIIndicator — segmented bar
-  const aiSegs = $("ai-segments");
-  if (aiSegs) {
-    const s = r.ai_provenance.score;
-    const n = Math.round(s / 10);
-    const cls = s < 33 ? "active-low" : s < 66 ? "active-medium" : "active-high";
-    aiSegs.innerHTML = Array.from({ length: 10 }, (_, i) =>
-      `<span class="ai-seg${i < n ? ` ${cls}` : ""}"></span>`
-    ).join("");
-    $("ai-value").textContent = `${s.toFixed(0)} / 100`;
-  }
-  $("band-ai").textContent = bandAi(r.ai_provenance.score);
-  $("conf-ai").textContent = `pewność: ${(r.ai_provenance.confidence * 100).toFixed(0)}%`;
-  $("break-ai").innerHTML = breakdownHtml(r.ai_provenance.breakdown);
+  // Warstwa językowa + statystyki
+  renderLanguageLayer(r.analyzer_scores);
+  renderStats(r);
 }
 
 function renderReport(r) {
@@ -402,31 +459,27 @@ function renderReport(r) {
     renderLlmError(r.llm_error);
     renderNotes(r.notes);
 
-    const llmBox = $("llm-explanation");
-    if (r.llm_explanation) {
-      llmBox.innerHTML = `<strong>Komentarz LLM:</strong> ${escapeHtml(r.llm_explanation)}`;
-      llmBox.classList.remove("hidden");
-    } else {
-      llmBox.classList.add("hidden");
+    renderDimensions(r.dimensions);
+    const dimSec = $("dim-sec");
+    if (dimSec) {
+      dimSec.classList.toggle("hidden", !(r.dimensions && Object.keys(r.dimensions).length));
     }
 
-    renderDimensions(r.dimensions);
     $("highlighted").innerHTML = renderHighlighted(CURRENT.text, CURRENT.findings);
     renderFindings(CURRENT.findings);
   } catch (e) {
     console.error("renderReport render error:", e);
   }
 
-  // Always show results and nav, regardless of render errors
-  $("abar-results").classList.remove("hidden");
+  // Reveal analysis column (grid switches 2→3 kolumny) + show proposals
+  document.body.classList.add("analyzed");
   $("proposals-empty").classList.add("hidden");
   $("proposals-panel").classList.remove("hidden");
   updateNav();
-  if (window.__revealAnalysisToggle) window.__revealAnalysisToggle();
 
-  if (CURRENT.findings.length > 0 && !CURRENT.findings[0].proposals) {
-    loadProposalsForFinding(0);
-  }
+  // Safeguard: gdy user wybrał propozycje, dociągnij je dla WSZYSTKICH
+  // fragmentów (z retry), by żaden zaznaczony fragment nie został pominięty.
+  if (CURRENT.humanize) ensureAllProposals();
 }
 
 // ---------- Navigation ----------
@@ -501,6 +554,22 @@ function loadAllProposals() {
   idxs.forEach((idx) => loadProposalsForFinding(idx));
 }
 
+// Safeguard: dociąga propozycje dla wszystkich fragmentów, które ich nie mają
+// i nie skończyły się trwałym błędem — by żaden zaznaczony fragment nie został
+// pominięty (np. gdy część rewrite'ów padła timeoutem).
+function ensureAllProposals() {
+  CURRENT.findings.forEach((f, i) => {
+    if (!f._loading && (!f.proposals || !f.proposals.length) && !f._error) {
+      loadProposalsForFinding(i);
+    }
+  });
+}
+
+function _bulkBtnMaybeReenable() {
+  const btn = $("load-all-props");
+  if (btn && btn.disabled && !CURRENT.findings.some((g) => g._loading)) btn.disabled = false;
+}
+
 async function loadProposalsForFinding(idx) {
   const f = CURRENT.findings[idx];
   if (!f || f._loading || (f.proposals && f.proposals.length)) return;
@@ -512,24 +581,29 @@ async function loadProposalsForFinding(idx) {
     const data = await fetchProposals(f);
     if (CURRENT.findings[idx] !== f) return;
     f.proposals = data.proposals || [];
-    f._error = f.proposals.length ? null : data.error || "Nie udało się wygenerować propozycji — wpisz własną wersję.";
+    if (!f.proposals.length) {
+      // Auto-retry raz, zanim poddamy się i pokażemy pole własnej wersji.
+      f._tries = (f._tries || 0) + 1;
+      if (f._tries < 2) {
+        f._loading = false;
+        return loadProposalsForFinding(idx);
+      }
+      f._error = data.error || "Nie udało się wygenerować propozycji — wpisz własną wersję.";
+    } else {
+      f._error = null;
+    }
     f._loading = false;
     renderFindings(CURRENT.findings);
     updateNav();
-    // Re-enable bulk button once all loads finish
-    const btn = $("load-all-props");
-    if (btn && btn.disabled && !CURRENT.findings.some((g) => g._loading)) {
-      btn.disabled = false;
-    }
+    _bulkBtnMaybeReenable();
   } catch (e) {
     if (CURRENT.findings[idx] === f) {
+      f._tries = (f._tries || 0) + 1;
       f._loading = false;
+      if (f._tries < 2) return loadProposalsForFinding(idx);
       f._error = "Błąd połączenia — spróbuj ponownie lub wpisz własną wersję.";
       renderFindings(CURRENT.findings);
-      const btn = $("load-all-props");
-      if (btn && btn.disabled && !CURRENT.findings.some((g) => g._loading)) {
-        btn.disabled = false;
-      }
+      _bulkBtnMaybeReenable();
     }
   }
 }
@@ -570,7 +644,7 @@ function applyReplacement(idx, replacement) {
 }
 
 function triggerScorePop() {
-  ["gauge-num", "sc-num-slop", "bar-num-slop", "ai-value", "bar-num-ai"].forEach((id) => {
+  ["gauge-num", "slop-num"].forEach((id) => {
     const el = $(id);
     if (!el) return;
     el.classList.remove("score-pop");
@@ -720,7 +794,9 @@ async function analyze() {
   $("status").textContent = "Analizuję…";
   setLeftMode("loading");
   try {
-    const humanize = $("with-humanize").checked;
+    const choice = document.querySelector('input[name="suggest"]:checked');
+    const humanize = choice ? choice.value === "yes" : false;
+    CURRENT.humanize = humanize;
     if (humanize) $("status").textContent = "Analizuję i generuję propozycje…";
     const resp = await fetch("/api/analyze", {
       method: "POST",
@@ -828,13 +904,11 @@ $("clear-text").addEventListener("click", () => {
   ta.focus();
 });
 
-$("bar-details-toggle").addEventListener("click", () => {
-  const expand = $("analysis-expand");
-  const btn = $("bar-details-toggle");
-  const isOpen = !expand.classList.contains("hidden");
-  expand.classList.toggle("hidden", isOpen);
-  btn.setAttribute("aria-expanded", String(!isOpen));
-  btn.textContent = isOpen ? "Szczegóły ▾" : "Szczegóły ▴";
+$("analysis-collapse").addEventListener("click", () => {
+  const aside = $("col-analysis");
+  const btn = $("analysis-collapse");
+  const collapsed = aside.classList.toggle("collapsed");
+  btn.setAttribute("aria-expanded", String(!collapsed));
 });
 
 $("highlighted").addEventListener("click", (e) => {
@@ -844,7 +918,12 @@ $("highlighted").addEventListener("click", (e) => {
 
 $("findings").addEventListener("click", (e) => {
   const load = e.target.closest(".load-props");
-  if (load) { loadProposalsForFinding(Number(load.dataset.idx)); return; }
+  if (load) {
+    const li = CURRENT.findings[Number(load.dataset.idx)];
+    if (li) li._tries = 0; // ręczne kliknięcie → znów pozwól na auto-retry
+    loadProposalsForFinding(Number(load.dataset.idx));
+    return;
+  }
 
   const opt = e.target.closest(".prop-opt");
   if (opt) {
@@ -946,48 +1025,21 @@ document.addEventListener("keydown", (e) => {
   } catch (e) {}
 }());
 
-// ---------- Drawer analizy (≤1199px) ----------
+// ---------- Świadomy wybór trybu: blokuj „Analizuj" do wyboru sugestii ----------
 (function () {
-  const toggle = $("analysis-toggle");
-  const closeBt = $("analysis-close");
-  const overlay = $("analysis-overlay");
-  function isDrawerMode() {
-    return window.matchMedia("(max-width: 1199px)").matches;
+  const radios = document.querySelectorAll('input[name="suggest"]');
+  const analyzeBtn = $("analyze");
+  radios.forEach((el) =>
+    el.addEventListener("change", () => {
+      if (analyzeBtn) analyzeBtn.disabled = false;
+      const st = $("status");
+      if (st && st.textContent.startsWith("Wybierz")) st.textContent = "";
+    })
+  );
+  const st = $("status");
+  if (st && analyzeBtn && analyzeBtn.disabled) {
+    st.textContent = "Wybierz tryb analizy powyżej.";
   }
-  let lastFocus = null;
-  function openDrawer() {
-    if (!isDrawerMode()) return;
-    lastFocus = document.activeElement;
-    document.body.classList.add("analysis-open");
-    if (overlay) overlay.classList.remove("hidden");
-    if (toggle) toggle.setAttribute("aria-expanded", "true");
-    if (closeBt) closeBt.focus();
-  }
-  function closeDrawer() {
-    document.body.classList.remove("analysis-open");
-    if (overlay) overlay.classList.add("hidden");
-    if (toggle) toggle.setAttribute("aria-expanded", "false");
-    if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
-  }
-  function toggleDrawer() {
-    document.body.classList.contains("analysis-open") ? closeDrawer() : openDrawer();
-  }
-  if (toggle) toggle.addEventListener("click", toggleDrawer);
-  if (closeBt) closeBt.addEventListener("click", closeDrawer);
-  if (overlay) overlay.addEventListener("click", closeDrawer);
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && document.body.classList.contains("analysis-open")) {
-      e.preventDefault();
-      closeDrawer();
-    }
-  });
-  window.addEventListener("resize", () => {
-    if (!isDrawerMode() && document.body.classList.contains("analysis-open")) closeDrawer();
-  });
-  // Pokaż przycisk „Analiza" dopiero po pierwszej analizie (CSS i tak chowa go ≥1200px).
-  window.__revealAnalysisToggle = function () {
-    if (toggle) toggle.classList.remove("hidden");
-  };
 }());
 
 loadModels();

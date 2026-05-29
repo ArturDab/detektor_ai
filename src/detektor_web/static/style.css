@@ -2481,3 +2481,183 @@ body { background: var(--page-bg); }
   .col-analysis { transition: none; }
   .analysis-overlay { transition: none; }
 }
+
+/* ════════════════════════════════════════════════════════════
+   FAZA 12 — przebudowa: tekst | sterowanie+propozycje | analiza
+   Empty state = 2 kolumny; po analizie 3. kolumna (analiza) dołącza.
+   Na węższych ekranach analiza jest nad rekomendacjami (zwijalna).
+   ════════════════════════════════════════════════════════════ */
+
+.three-col {
+  display: grid;
+  gap: var(--space-6, 20px);
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
+  grid-template-areas:
+    "doc controls"
+    "doc analysis"
+    "doc proposals";
+  max-width: 1340px;
+  margin-inline: auto;
+}
+.col-doc { grid-area: doc; min-width: 0; }
+.col-controls { grid-area: controls; min-width: 0; }
+.col-proposals { grid-area: proposals; }
+.three-col .col-analysis { grid-area: analysis; }
+
+/* Trzecia kolumna pojawia się dopiero po pierwszej analizie */
+.three-col .col-analysis { display: none; }
+body.analyzed .three-col .col-analysis { display: flex; }
+
+/* ── Wide ≥1200 i po analizie: trzy pełne kolumny ── */
+@media (min-width: 1200px) {
+  body.analyzed .three-col {
+    grid-template-columns: minmax(0, 1fr) 360px 340px;
+    grid-template-areas:
+      "doc controls analysis"
+      "doc proposals analysis";
+  }
+  body.analyzed .three-col .col-analysis {
+    position: sticky;
+    top: calc(var(--topbar-h) + 12px);
+    align-self: start;
+    max-height: calc(100vh - var(--topbar-h) - 20px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .analysis-head .analysis-collapse { display: none; }
+  .col-analysis.collapsed .analysis-body { display: flex; }
+}
+
+/* ── 960–1199: 2 kolumny, analiza nad rekomendacjami (zwijalna) ── */
+@media (max-width: 1199px) {
+  body.analyzed .three-col .col-analysis {
+    position: static;
+    transform: none;
+    width: auto;
+    max-height: none;
+    overflow: visible;
+    border-left: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+    z-index: auto;
+  }
+  .col-proposals { position: static; max-height: none; overflow: visible; }
+  .analysis-overlay { display: none !important; }
+}
+
+/* ── <960: pojedyncza kolumna (dokument → sterowanie → analiza → propozycje) ── */
+@media (max-width: 959px) {
+  .three-col {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "doc"
+      "controls"
+      "analysis"
+      "proposals";
+  }
+}
+
+/* ── Karta sterowania (model + wybór sugestii + Analizuj) ── */
+.controls-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.ctrl-label {
+  font-size: var(--font-label, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.controls-card .model-select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.suggest-choice { border: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.suggest-choice legend { padding: 0; float: none; }
+.choice-opts { display: flex; flex-direction: column; gap: 8px; }
+.choice-opt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  transition: border-color var(--dur-fast, 120ms), background var(--dur-fast, 120ms);
+}
+.choice-opt:hover { border-color: var(--accent-soft-border); }
+.choice-opt input { grid-row: 1 / span 2; margin-top: 3px; accent-color: var(--accent); }
+.choice-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.choice-main { font-weight: 600; color: var(--text); }
+.choice-sub { grid-column: 2; font-size: var(--font-caption, 0.8125rem); color: var(--muted); margin-top: 1px; }
+.btn-analyze { width: 100%; padding: 12px; font-size: 1rem; font-weight: 700; }
+.btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+/* ── Nagłówek analizy + zwijanie (zwijanie aktywne <1200px) ── */
+.analysis-head { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; }
+.analysis-title { margin: 0; font-size: var(--font-h3, 1.125rem); font-weight: 700; color: var(--text); }
+.analysis-collapse {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--muted);
+  cursor: pointer;
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.analysis-collapse:hover { color: var(--text); background: var(--surface-2); }
+.collapse-chevron { display: inline-block; transition: transform var(--dur-base, 200ms) var(--ease-out); }
+.col-analysis.collapsed .collapse-chevron { transform: rotate(180deg); }
+.col-analysis.collapsed .analysis-body { display: none; }
+.analysis-body { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Hero: gauge „ludzki" ── */
+.human-band { text-align: center; font-weight: 600; color: var(--text-body); font-size: 0.95rem; margin-top: -2px; }
+
+/* ── Raport szczegółowy ── */
+.analysis-report { display: flex; flex-direction: column; gap: 16px; padding: 16px 18px; }
+.report-sec { display: flex; flex-direction: column; gap: 8px; }
+.report-h {
+  margin: 0;
+  font-size: var(--font-label, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.report-hint { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); }
+.verdict-text { margin: 0; font-size: 0.95rem; line-height: 1.55; color: var(--text-body); }
+
+.metric-row { display: flex; align-items: center; gap: 10px; }
+.metric-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill, 999px);
+  overflow: hidden;
+}
+.metric-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--green);
+  transition: width var(--dur-slow, 320ms) var(--ease-out);
+}
+.metric-bar-fill[data-level="ok"] { background: var(--green); }
+.metric-bar-fill[data-level="warn"] { background: var(--yellow); }
+.metric-bar-fill[data-level="bad"] { background: var(--red); }
+.metric-num { font-weight: 700; font-size: 1.05rem; min-width: 2.2ch; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.metric-band { font-size: 0.8125rem; color: var(--text-body); font-weight: 600; }
+.metric-list { display: flex; flex-direction: column; gap: 9px; }
+.metric-lbl { flex: 0 0 42%; font-size: 0.85rem; color: var(--text-body); }
+.metric-num-sm { min-width: 2.2ch; text-align: right; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(82px, 1fr)); gap: 8px; }
+.stat-tile { display: flex; flex-direction: column; gap: 2px; padding: 10px; background: var(--surface-2); border-radius: var(--radius-md, 10px); }
+.stat-val { font-size: 1.05rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.stat-lbl { font-size: 0.72rem; color: var(--muted); line-height: 1.3; }

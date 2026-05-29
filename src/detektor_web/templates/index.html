@@ -31,7 +31,6 @@
     <div class="topbar-inner">
       <h1><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false"><circle cx="13" cy="13" r="8" stroke="currentColor" stroke-width="2.5"/><circle cx="13" cy="13" r="2.5" fill="currentColor"/><path d="M19 19L27 27" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>Detektor AI slop <span class="pl">PL</span></h1>
       <div class="topbar-right">
-        <select id="model-select" class="model-select" aria-label="Model LLM" title="Model LLM"></select>
         <button
           id="theme-toggle"
           type="button"
@@ -75,22 +74,35 @@
         </div>
       </div>
 
-      <!-- ══ KOL.2: PROPOZYCJE (= .col-right, kontener scrolla findings) ══ -->
-      <div class="col-right">
+      <!-- ══ STEROWANIE: model + wybór sugestii + Analizuj ══ -->
+      <div class="col-controls">
+        <div class="controls-card rail-card">
+          <label class="ctrl-label" for="model-select">Model analizujący</label>
+          <select id="model-select" class="model-select" aria-label="Model LLM"></select>
 
-        <!-- ControlsCard — zawsze widoczny -->
-        <div class="sidebar-controls rail-card">
-          <div class="sc-row">
-            <button id="analyze">Analizuj</button>
-            <label class="opt-humanize" title="Generuje propozycje poprawek od razu przy analizie (wolniej, wymaga klucza)">
-              <input type="checkbox" id="with-humanize" /> Z propozycjami
-            </label>
-            <button id="analysis-toggle" class="btn-mini analysis-toggle hidden" type="button"
-                    aria-expanded="false" aria-controls="col-analysis"
-                    title="Pokaż panel analizy">Analiza ▸</button>
-          </div>
+          <fieldset id="suggest-choice" class="suggest-choice">
+            <legend class="ctrl-label">Przygotować propozycje poprawek?</legend>
+            <div class="choice-opts" role="radiogroup">
+              <label class="choice-opt">
+                <input type="radio" name="suggest" value="yes" />
+                <span class="choice-main">Tak, z sugestiami</span>
+                <span class="choice-sub">AI zaproponuje konkretne przepisania</span>
+              </label>
+              <label class="choice-opt">
+                <input type="radio" name="suggest" value="no" />
+                <span class="choice-main">Nie, sama ocena</span>
+                <span class="choice-sub">Szybciej — tylko wynik i wykryte problemy</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <button id="analyze" class="btn-analyze" disabled>Analizuj</button>
           <span id="status" class="status" aria-live="polite"></span>
         </div>
+      </div>
+
+      <!-- ══ PROPOZYCJE (= .col-right, kontener scrolla findings) ══ -->
+      <div class="col-proposals col-right">
 
         <!-- Nawigacja po fragmentach -->
         <div id="finding-nav" class="rail-card finding-nav" style="display:none">
@@ -104,14 +116,16 @@
 
         <!-- Empty state (przed analizą) -->
         <div id="proposals-empty" class="rail-card proposals-empty">
-          <div class="empty-icon" aria-hidden="true">✦</div>
-          <p class="empty-title">Gotowy do analizy</p>
-          <p class="empty-body">Wklej tekst w lewym oknie i kliknij <strong>Analizuj</strong>, aby zobaczyć propozycje zmian.</p>
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+          </div>
+          <p class="empty-title">Tu pojawią się sugestie zmian</p>
+          <p class="empty-body">Wklej tekst po lewej, wybierz tryb i kliknij <strong>Analizuj</strong>. Podświetlimy problematyczne fragmenty i zaproponujemy poprawki.</p>
           <ul class="empty-list">
-            <li>Wykrywa frazesy i kliszé typowe dla AI</li>
-            <li>Identyfikuje powtarzalne struktury zdań</li>
-            <li>Ocenia informatywność akapitów</li>
-            <li>Proponuje bardziej ludzkie sformułowania</li>
+            <li>Frazesy i klisze typowe dla AI</li>
+            <li>Powtarzalne struktury zdań</li>
+            <li>Niska informatywność akapitów</li>
+            <li>Bardziej ludzkie sformułowania</li>
           </ul>
         </div>
 
@@ -123,100 +137,75 @@
           <ul id="findings" class="findings"></ul>
         </div>
 
-      </div><!-- /col-right (KOL.2) -->
+      </div><!-- /col-proposals -->
 
-      <!-- ══ KOL.3: ANALIZA (≤1199px = wysuwany panel) ══ -->
+      <!-- ══ ANALIZA: gauge „ludzki" + raport ══ -->
       <aside id="col-analysis" class="col-analysis" aria-label="Analiza tekstu">
-        <div class="col-analysis-head">
-          <h2 class="col-analysis-title">Analiza</h2>
-          <button id="analysis-close" class="analysis-close" type="button" aria-label="Zamknij panel analizy" title="Zamknij">&times;</button>
+        <div class="analysis-head">
+          <h2 class="analysis-title">Analiza tekstu</h2>
+          <button id="analysis-collapse" class="analysis-collapse" type="button" aria-expanded="true" aria-controls="analysis-body" title="Zwiń / rozwiń analizę">
+            <span aria-hidden="true" class="collapse-chevron">▴</span>
+          </button>
         </div>
 
-        <!-- Ludzkie podsumowanie (prostym językiem) -->
-        <div id="analysis-summary" class="rail-card analysis-summary hidden"></div>
+        <div id="analysis-body" class="analysis-body">
 
-        <!-- Wyniki analizy — pokazywane po analizie -->
-        <div id="abar-results" class="rail-card score-hero hidden">
-          <div class="gauge" data-level="ok" role="img" aria-label="Ocena jakości pisania">
-            <div class="gauge-inner">
-              <span id="gauge-num" class="gauge-num">—</span>
-              <span class="gauge-cap">jakość · /100</span>
+          <!-- Gauge: jak bardzo tekst jest ludzki -->
+          <div id="abar-results" class="rail-card score-hero">
+            <div class="gauge" data-level="ok" role="img" aria-label="Jak bardzo tekst jest ludzki">
+              <div class="gauge-inner">
+                <span id="gauge-num" class="gauge-num">—</span>
+                <span class="gauge-cap">ludzki · /100</span>
+              </div>
             </div>
-          </div>
-          <div class="hero-stats">
-            <div class="hero-stat">
-              <span id="bar-num-slop" class="bar-score-num">—</span>
-              <span class="bar-score-lbl">Slop</span>
+            <div id="human-band" class="human-band"></div>
+            <div id="analysis-summary" class="analysis-summary hidden"></div>
+            <div class="abar-actions">
+              <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
+              <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
             </div>
-            <div class="hero-stat">
-              <span id="bar-num-ai" class="bar-score-num">—</span>
-              <span class="bar-score-lbl">Sygnał AI</span>
-            </div>
-          </div>
-          <div id="abar-verdict" class="abar-verdict">
-            <div id="verdict-headline" class="verdict-headline"></div>
-          </div>
-          <div class="abar-actions">
-            <button id="copy-all" class="btn-secondary">Kopiuj tekst</button>
-            <button id="humanize-all" class="btn-secondary">Humanizuj wszystko</button>
             <span id="humanize-status" class="status" aria-live="polite"></span>
-            <button id="bar-details-toggle" class="btn-mini abar-toggle" aria-expanded="false">Szczegóły ▾</button>
           </div>
-        </div>
 
-        <!-- Rozwijane szczegóły: ScoreCard, AIIndicator, LLM, wymiary -->
-        <div id="analysis-expand" class="rail-card analysis-expand hidden">
-          <div class="expand-inner">
+          <!-- Raport szczegółowy (zawsze widoczny) -->
+          <div id="analysis-report" class="rail-card analysis-report">
             <div id="llm-error" class="alert alert-error hidden"></div>
             <div id="notes" class="notes"></div>
-            <div id="verdict-sub" class="verdict-sub expand-verdict-sub hidden"></div>
-            <div class="scores">
-              <!-- ScoreCard v2 — Jakość tekstu -->
-              <div class="score-card-v2">
-                <span class="sc-label">Jakość tekstu</span>
-                <p class="metric-hint">Ile w tekście „lania wody", frazesów i ogólników. Im wyżej, tym konkretniej i naturalniej.</p>
-                <div class="sc-number-row">
-                  <span id="sc-num-slop" class="sc-number">—</span>
-                  <span class="sc-denom">/100</span>
-                </div>
-                <div class="sc-bar-track">
-                  <div id="sc-bar-slop" class="sc-bar-fill" data-level="ok" style="width:0%"></div>
-                </div>
-                <span id="band-slop" class="band"></span>
-                <details class="details">
-                  <summary>Szczegóły dla zaawansowanych</summary>
-                  <div id="conf-slop" class="conf"></div>
-                  <div id="break-slop" class="breakdown"></div>
-                </details>
-              </div>
-              <!-- AIIndicator — segmented bar -->
-              <div class="ai-indicator">
-                <span class="ai-label">Sygnał autorstwa AI</span>
-                <p class="metric-hint">Na ile tekst przypomina styl generowany przez AI. To oszacowanie, nie dowód.</p>
-                <div class="ai-bar-row">
-                  <div id="ai-segments" class="ai-segments"></div>
-                  <span id="ai-value" class="ai-value">—</span>
-                </div>
-                <span id="band-ai" class="ai-qual band"></span>
-                <details class="details">
-                  <summary>Szczegóły dla zaawansowanych</summary>
-                  <div id="conf-ai" class="conf"></div>
-                  <div id="break-ai" class="breakdown"></div>
-                  <p class="disclaimer">To oszacowanie, nie dowód. Wynik bywa zawodny.</p>
-                </details>
-              </div>
-            </div>
-            <div id="llm-explanation" class="llm-box hidden"></div>
-            <div class="exp-panel">
-              <h3>Wymiary jakości <span class="muted">(z modelu LLM)</span></h3>
-              <div id="dimensions" class="dimension-list">Brak danych z LLM (tryb heurystyczny).</div>
-            </div>
-          </div>
-        </div>
-      </aside><!-- /col-analysis (KOL.3) -->
 
-      <!-- Overlay drawera (klik = zamknij) -->
-      <div id="analysis-overlay" class="analysis-overlay hidden" tabindex="-1"></div>
+            <section class="report-sec">
+              <h3 class="report-h">Ocena ekspercka</h3>
+              <p id="verdict-text" class="verdict-text"></p>
+            </section>
+
+            <section class="report-sec">
+              <h3 class="report-h">AI slop <span class="report-hint">— ile „lania wody" i szablonu</span></h3>
+              <div class="metric-row">
+                <div class="metric-bar-track"><div id="slop-bar" class="metric-bar-fill" data-level="ok" style="width:0%"></div></div>
+                <span id="slop-num" class="metric-num">—</span>
+              </div>
+              <span id="slop-band" class="metric-band"></span>
+            </section>
+
+            <section class="report-sec">
+              <h3 class="report-h">Warstwa językowa <span class="report-hint">— im niżej, tym lepiej</span></h3>
+              <div id="lang-layer" class="metric-list"></div>
+            </section>
+
+            <section id="dim-sec" class="report-sec hidden">
+              <h3 class="report-h">Wymiary jakości <span class="report-hint">(z modelu LLM)</span></h3>
+              <div id="dimensions" class="dimension-list"></div>
+            </section>
+
+            <section class="report-sec">
+              <h3 class="report-h">Statystyki i pewność</h3>
+              <div id="stats-grid" class="stats-grid"></div>
+            </section>
+
+            <p class="disclaimer">Ocena autorstwa AI to oszacowanie, nie dowód. Wynik bywa zawodny.</p>
+          </div>
+
+        </div><!-- /analysis-body -->
+      </aside><!-- /col-analysis -->
 
     </div><!-- /three-col -->
   </main>
