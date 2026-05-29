@@ -2488,17 +2488,23 @@ body { background: var(--page-bg); }
    Na węższych ekranach analiza jest nad rekomendacjami (zwijalna).
    ════════════════════════════════════════════════════════════ */
 
+/* Pełna szerokość ekranu (zamiast wąskiego, wyśrodkowanego kontenera) */
+.layout { max-width: none; }
+.topbar-inner { max-width: none; }
+
 .three-col {
   display: grid;
   gap: var(--space-6, 20px);
   align-items: start;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
+  grid-template-columns: minmax(0, 1.7fr) minmax(360px, 1fr);
+  /* 4. wiersz "1fr" pochłania nadmiar wysokości (wysoki edytor po lewej),
+     dzięki czemu sterowanie i propozycje są sklejone u góry kolumny. */
+  grid-template-rows: auto auto auto 1fr;
   grid-template-areas:
     "doc controls"
     "doc analysis"
-    "doc proposals";
-  max-width: 1340px;
-  margin-inline: auto;
+    "doc proposals"
+    "doc .";
 }
 .col-doc { grid-area: doc; min-width: 0; }
 .col-controls { grid-area: controls; min-width: 0; }
@@ -2509,13 +2515,15 @@ body { background: var(--page-bg); }
 .three-col .col-analysis { display: none; }
 body.analyzed .three-col .col-analysis { display: flex; }
 
-/* ── Wide ≥1200 i po analizie: trzy pełne kolumny ── */
+/* ── Wide ≥1200 i po analizie: trzy pełne kolumny (wszystkie rozciągnięte) ── */
 @media (min-width: 1200px) {
   body.analyzed .three-col {
-    grid-template-columns: minmax(0, 1fr) 360px 340px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr) minmax(320px, 1fr);
+    grid-template-rows: auto auto 1fr;
     grid-template-areas:
       "doc controls analysis"
-      "doc proposals analysis";
+      "doc proposals analysis"
+      "doc . analysis";
   }
   body.analyzed .three-col .col-analysis {
     position: sticky;
@@ -2551,6 +2559,7 @@ body.analyzed .three-col .col-analysis { display: flex; }
 @media (max-width: 959px) {
   .three-col {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
     grid-template-areas:
       "doc"
       "controls"
