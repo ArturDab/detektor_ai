@@ -121,6 +121,10 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   background: var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 100% -5%, rgba(16,137,78,.07), transparent 60%),
+    radial-gradient(900px 500px at -5% 0%, rgba(52,211,153,.06), transparent 55%);
+  background-attachment: fixed;
   color: var(--text-body);
   line-height: 1.6;
   font-size: 16px;
@@ -140,7 +144,9 @@ body {
    TOPBAR
    ═══════════════════════════════════════════ */
 .topbar {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -2197,8 +2203,8 @@ body { background: var(--page-bg); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   margin-bottom: var(--space-3, 10px);
   font-size: 24px;
   line-height: 1;
@@ -2206,6 +2212,7 @@ body { background: var(--page-bg); }
   background: var(--accent-soft);
   border: 1px solid var(--accent-soft-border);
   border-radius: var(--radius-pill, 999px);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-soft) 55%, transparent);
 }
 .proposals-empty .empty-title {
   margin: 0;
@@ -2576,7 +2583,18 @@ body { background: var(--page-bg); }
 }
 
 /* ── Karta sterowania (model + wybór sugestii + Analizuj) ── */
-.controls-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.controls-card {
+  display: flex; flex-direction: column; gap: 12px; padding: 18px;
+  position: relative; overflow: hidden;
+  background:
+    linear-gradient(180deg, var(--accent-soft) 0%, transparent 76px),
+    var(--card-bg);
+}
+.controls-card::before {
+  content: "";
+  position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--color-accent-active));
+}
 .ctrl-label {
   font-size: var(--font-label, 0.75rem);
   font-weight: 700;
@@ -2650,6 +2668,12 @@ body { background: var(--page-bg); }
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
+  display: flex; align-items: center; gap: 7px;
+}
+.report-h::before {
+  content: "";
+  width: 4px; height: 13px; border-radius: 2px;
+  background: var(--accent); flex-shrink: 0;
 }
 .report-hint { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); }
 .verdict-text { margin: 0; font-size: 0.95rem; line-height: 1.55; color: var(--text-body); }
